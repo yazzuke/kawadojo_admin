@@ -1,0 +1,59 @@
+@import "tailwindcss";
+
+@theme {
+  /* Colores Kawasaki */
+  --color-kawa-green: #62BE1B;
+  --color-kawa-green-dark: #4A9A15;
+  --color-kawa-green-light: #7ED42F;
+  --color-kawa-black: #000000;
+  --color-kawa-gray: #111111;
+}
+
+/* Patrón de líneas Kawasaki */
+.kawa-lines {
+  background: 
+    linear-gradient(to bottom, 
+      transparent 0%, 
+      transparent 85%,
+      var(--color-kawa-green) 85%,
+      var(--color-kawa-green) 88%,
+      var(--color-kawa-black) 88%,
+      var(--color-kawa-black) 90%,
+      var(--color-kawa-green) 90%,
+      var(--color-kawa-green) 100%
+    );
+}
+
+/* Líneas horizontales estilo Kawasaki */
+.kawa-stripe {
+  position: relative;
+}
+
+.kawa-stripe::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 12px;
+  background: 
+    linear-gradient(to bottom,
+      var(--color-kawa-green) 0%,
+      var(--color-kawa-green) 35%,
+      var(--color-kawa-black) 35%,
+      var(--color-kawa-black) 50%,
+      var(--color-kawa-green) 50%,
+      var(--color-kawa-green) 65%,
+      var(--color-kawa-black) 65%,
+      var(--color-kawa-black) 75%,
+      var(--color-kawa-green) 75%,
+      var(--color-kawa-green) 100%
+    );
+}
+
+/* Fondo negro puro con sutil resplandor verde */
+.kawa-bg {
+  background-color: #000000;
+  background-image: 
+    radial-gradient(ellipse at top, rgba(98, 190, 27, 0.06) 0%, transparent 50%);
+}

@@ -219,11 +219,31 @@ export default function BatchesPage() {
                     </span>
                   </div>
                   <div className="flex justify-between">
+                    <span className="text-white text-sm">Gastos:</span>
+                    <span className="text-red-400 font-medium">
+                      {formatCurrency(summary.expenses.total)}
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
                     <span className="text-white text-sm">Ganancia:</span>
                     <span className={`font-medium ${
-                      summary.actual.total_actual_profit >= 0 ? 'text-green-400' : 'text-red-400'
+                      summary.actual.real_profit >= 0 ? 'text-green-400' : 'text-red-400'
                     }`}>
-                      {formatCurrency(summary.actual.total_actual_profit)}
+                      {formatCurrency(summary.actual.real_profit)}
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-white text-sm">vs Inversión:</span>
+                    <span className={`font-medium ${
+                      summary.actual.profit_vs_investment >= 0 ? 'text-green-400' : 'text-red-400'
+                    }`}>
+                      {formatCurrency(summary.actual.profit_vs_investment)}
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-white text-sm">Margen:</span>
+                    <span className="text-kawa-green font-bold">
+                      {summary.actual.sales_margin}
                     </span>
                   </div>
                   <div className="flex justify-between">

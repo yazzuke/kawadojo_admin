@@ -57,9 +57,9 @@ export const batchesService = {
     await api.delete(`/batches/${id}`);
   },
 
-  async deleteItems(batchId: string, itemIds: string[]): Promise<void> {
+  async deleteItems(batchId: string, itemIds: string[], force: boolean = false): Promise<void> {
     await api.delete(`/batches/${batchId}/items`, {
-      data: { item_ids: itemIds }
+      data: { item_ids: itemIds, force }
     });
   },
 
@@ -69,5 +69,13 @@ export const batchesService = {
 
   async updateItemQuantity(batchId: string, itemId: string, quantity: number): Promise<void> {
     await api.patch(`/batches/${batchId}/items/${itemId}`, { quantity });
+  },
+
+  async moveItem(fromBatchId: string, itemId: string, toBatchId: string, unitCost?: number): Promise<any> {
+    const response = await api.post(`/batches/${fromBatchId}/items/${itemId}/move`, {
+      to_batch_id: toBatchId,
+      unit_cost: unitCost
+    });
+    return response.data.data;
   }
 };

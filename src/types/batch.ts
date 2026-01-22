@@ -136,9 +136,17 @@ export interface BatchSummary {
     total_sold_units: number;
     remaining_units: number;
     total_actual_revenue: number;
+    total_expenses: number;
+    real_profit: number;
+    sales_margin: string;
     total_actual_profit: number;
+    profit_vs_investment: number;
     actual_roi: string;
     completion_percentage: string;
+  };
+  expenses: {
+    total: number;
+    count: number;
   };
   by_status: {
     ordered: number;

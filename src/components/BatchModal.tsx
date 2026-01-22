@@ -143,7 +143,23 @@ export default function BatchModal({ batch, onClose, onSuccess }: BatchModalProp
           .map(item => item.id);
 
         if (itemsToDelete.length > 0) {
-          await batchesService.deleteItems(batch.id, itemsToDelete);
+          try {
+            await batchesService.deleteItems(batch.id, itemsToDelete, false);
+          } catch (error: any) {
+            // Si hay items vendidos, preguntar al usuario si quiere forzar
+            if (error.response?.data?.message?.includes('ya se han vendido')) {
+              const forceDelete = window.confirm(
+                `${error.response.data.message}\n\n¿Deseas eliminar estos items de todas formas? Esto no afectará las ventas existentes.`
+              );
+              if (forceDelete) {
+                await batchesService.deleteItems(batch.id, itemsToDelete, true);
+              } else {
+                throw error; // Re-lanzar el error si el usuario no confirma
+              }
+            } else {
+              throw error;
+            }
+          }
         }
 
         // Find items to add (new products)

@@ -109,4 +109,12 @@ export const orderService = {
     const response = await api.post<Order>(`/orders/${id}/notes`, { note });
     return response.data;
   },
+
+  // Actualizar precio de un item
+  async updateItemPrice(orderId: string, itemId: string, productPrice: number): Promise<Order> {
+    const response = await api.put<Order>(`/orders/${orderId}/items/${itemId}`, {
+      product_price: productPrice,
+    });
+    return response.data;
+  },
 };

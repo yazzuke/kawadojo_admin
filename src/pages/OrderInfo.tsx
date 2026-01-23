@@ -13,8 +13,9 @@ import {
   X,
 } from 'lucide-react';
 import { orderService } from '../services/orderService';
-import type { Order, OrderStatus } from '../types/order';
+import type { Order, OrderStatus, OrderItem } from '../types/order';
 import { ORDER_STATUSES, PAYMENT_METHODS, PAYMENT_STATUSES } from '../types/order';
+import EditItemPriceModal from '../components/EditItemPriceModal';
 
 export default function OrderInfoPage() {
   const { id } = useParams<{ id: string }>();
@@ -41,6 +42,7 @@ export default function OrderInfoPage() {
     cash_received: 0,
     admin_notes: '',
   });
+  const [editingItem, setEditingItem] = useState<OrderItem | null>(null);
 
   useEffect(() => {
     if (id) {
@@ -135,6 +137,19 @@ export default function OrderInfoPage() {
     } catch (error) {
       console.error('Error adding note:', error);
       alert('Error al agregar nota');
+    }
+  };
+
+  const handleUpdateItemPrice = async (itemId: string, newPrice: number) => {
+    if (!order) return;
+
+    try {
+      await orderService.updateItemPrice(order.id, itemId, newPrice);
+      await loadOrder();
+      setEditingItem(null);
+    } catch (error) {
+      console.error('Error updating item price:', error);
+      throw error;
     }
   };
 
@@ -291,8 +306,17 @@ export default function OrderInfoPage() {
                       </p>
                     )}
                   </div>
-                  <div className="text-right">
-                    <p className="text-white font-bold">{formatCurrency(item.subtotal)}</p>
+                  <div className="flex items-center gap-3">
+                    <div className="text-right">
+                      <p className="text-white font-bold">{formatCurrency(item.subtotal)}</p>
+                    </div>
+                    <button
+                      onClick={() => setEditingItem(item)}
+                      className="p-2 text-gray-400 hover:text-kawa-green transition-colors"
+                      title="Editar precio"
+                    >
+                      <Edit size={18} />
+                    </button>
                   </div>
                 </div>
               ))}
@@ -636,6 +660,15 @@ export default function OrderInfoPage() {
           )}
         </div>
       </div>
+
+      {/* Edit Item Price Modal */}
+      {editingItem && (
+        <EditItemPriceModal
+          item={editingItem}
+          onClose={() => setEditingItem(null)}
+          onSave={handleUpdateItemPrice}
+        />
+      )}
     </div>
   );
 }

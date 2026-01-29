@@ -4,6 +4,7 @@ export interface Product {
   slug: string;
   price: number;
   cost: number | null;
+  in_stock: boolean;
   product_images: Array<{
     id: string;
     url: string;

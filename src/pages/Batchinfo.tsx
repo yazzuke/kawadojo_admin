@@ -13,6 +13,7 @@ export default function BatchInfoPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState(false);
+  const [stockFilter, setStockFilter] = useState<'all' | 'sold' | 'available'>('all');
 
   useEffect(() => {
     if (id) {
@@ -75,6 +76,22 @@ export default function BatchInfoPage() {
   const getStatusInfo = (status: string) => {
     return BATCH_STATUSES.find(s => s.value === status) || BATCH_STATUSES[0];
   };
+
+  const getFilteredItems = () => {
+    if (!batch?.items) return [];
+    
+    switch (stockFilter) {
+      case 'sold':
+        return batch.items.filter(item => !item.product.in_stock);
+      case 'available':
+        return batch.items.filter(item => item.product.in_stock);
+      default:
+        return batch.items;
+    }
+  };
+
+  const soldCount = batch?.items.filter(item => !item.product.in_stock).length || 0;
+  const availableCount = batch?.items.filter(item => item.product.in_stock).length || 0;
 
   if (isLoading) {
     return (
@@ -305,9 +322,48 @@ export default function BatchInfoPage() {
 
       {/* Products */}
       <div className="bg-kawa-gray p-6 rounded-lg border border-gray-800">
-        <h3 className="text-xl font-semibold text-white mb-4">Productos en el Lote</h3>
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-xl font-semibold text-white">Productos en el Lote</h3>
+          <div className="flex gap-2">
+            <button
+              onClick={() => setStockFilter('all')}
+              className={`px-4 py-2 rounded-lg transition-colors ${
+                stockFilter === 'all'
+                  ? 'bg-kawa-green text-kawa-black font-semibold'
+                  : 'bg-kawa-black text-gray-400 hover:text-white'
+              }`}
+            >
+              Todos ({batch?.items.length || 0})
+            </button>
+            <button
+              onClick={() => setStockFilter('sold')}
+              className={`px-4 py-2 rounded-lg transition-colors ${
+                stockFilter === 'sold'
+                  ? 'bg-red-600 text-white font-semibold'
+                  : 'bg-kawa-black text-gray-400 hover:text-white'
+              }`}
+            >
+              Vendidos ({soldCount})
+            </button>
+            <button
+              onClick={() => setStockFilter('available')}
+              className={`px-4 py-2 rounded-lg transition-colors ${
+                stockFilter === 'available'
+                  ? 'bg-green-600 text-white font-semibold'
+                  : 'bg-kawa-black text-gray-400 hover:text-white'
+              }`}
+            >
+              Disponibles ({availableCount})
+            </button>
+          </div>
+        </div>
         <div className="space-y-3">
-          {batch.items.map((item) => (
+          {getFilteredItems().length === 0 ? (
+            <div className="text-center py-8 text-gray-400">
+              No hay productos {stockFilter === 'sold' ? 'vendidos' : stockFilter === 'available' ? 'disponibles' : ''} en este lote
+            </div>
+          ) : (
+            getFilteredItems().map((item) => (
             <div key={item.id} className="flex flex-col gap-3 p-4 bg-kawa-black rounded-lg border border-gray-800 hover:border-gray-700 transition-colors">
               <div className="flex items-center gap-4">
                 {item.product.product_images[0] && (
@@ -318,7 +374,16 @@ export default function BatchInfoPage() {
                   />
                 )}
                 <div className="flex-1">
-                  <p className="font-medium text-white">{item.product.name}</p>
+                  <div className="flex items-center gap-3">
+                    <p className="font-medium text-white">{item.product.name}</p>
+                    <span className={`px-2 py-1 text-xs font-semibold rounded ${
+                      item.product.in_stock
+                        ? 'bg-green-900 bg-opacity-50 text-green-400 border border-green-700'
+                        : 'bg-red-900 bg-opacity-50 text-red-400 border border-red-700'
+                    }`}>
+                      {item.product.in_stock ? 'Disponible' : 'Vendido'}
+                    </span>
+                  </div>
                   <p className="text-sm text-gray-400 mt-1">
                     Cantidad: {item.quantity} unidades
                   </p>
@@ -357,7 +422,8 @@ export default function BatchInfoPage() {
                 </div>
               )}
             </div>
-          ))}
+          ))
+          )}
         </div>
       </div>
 

@@ -124,10 +124,10 @@ export default function BatchModal({ batch, onClose, onSuccess }: BatchModalProp
       if (batch) {
         // Update existing batch
         const updateData: UpdateBatchData = {
-          purchase_total_cost: Number(formData.purchase_total_cost),
-          shipping_cost: formData.shipping_cost ? Number(formData.shipping_cost) : undefined,
-          customs_fees: formData.customs_fees ? Number(formData.customs_fees) : undefined,
-          additional_fees: formData.additional_fees ? Number(formData.additional_fees) : undefined,
+          purchase_total_cost: Number(formData.purchase_total_cost) || 0,
+          shipping_cost: Number(formData.shipping_cost) || 0,
+          customs_fees: Number(formData.customs_fees) || 0,
+          additional_fees: Number(formData.additional_fees) || 0,
           mailbox_tracking: formData.mailbox_tracking || undefined,
           notes: formData.notes || undefined,
         };
@@ -187,9 +187,9 @@ export default function BatchModal({ batch, onClose, onSuccess }: BatchModalProp
         if (formData.status !== batch.status) {
           await batchesService.updateStatus(batch.id, {
             status: formData.status,
-            customs_fees: updateData.customs_fees,
-            additional_fees: updateData.additional_fees,
-            mailbox_tracking: updateData.mailbox_tracking,
+            customs_fees: Number(formData.customs_fees) || 0,
+            additional_fees: Number(formData.additional_fees) || 0,
+            mailbox_tracking: formData.mailbox_tracking || undefined,
           });
         }
       } else {

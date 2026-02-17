@@ -18,6 +18,7 @@ import {
   User,
   Eye,
   X,
+  Plus,
 } from 'lucide-react';
 import { financialService } from '../services/financialresumeService';
 import type { FinancialSummaryData, MonthlySummaryData, MonthData, OrderListItem } from '../types/financialresume';
@@ -28,6 +29,9 @@ export default function FinancialResumePage() {
   const [isLoading, setIsLoading] = useState(true);
   const [year, setYear] = useState(new Date().getFullYear());
   const [activeTab, setActiveTab] = useState<'overview' | 'monthly'>('overview');
+  const [showExpenseModal, setShowExpenseModal] = useState(false);
+  const [showInterestModal, setShowInterestModal] = useState(false);
+  const [showLossModal, setShowLossModal] = useState(false);
 
   useEffect(() => {
     loadData();
@@ -140,11 +144,34 @@ export default function FinancialResumePage() {
           formatCurrency={formatCurrency}
           formatPercent={formatPercent}
           maxMonthlyRevenue={maxMonthlyRevenue}
+          onAddExpense={() => setShowExpenseModal(true)}
+          onAddInterest={() => setShowInterestModal(true)}
+          onAddLoss={() => setShowLossModal(true)}
         />
       ) : (
         <MonthlyTab
           monthly={monthly}
           formatCurrency={formatCurrency}
+        />
+      )}
+
+      {/* Create Modals */}
+      {showExpenseModal && (
+        <CreateExpenseModal
+          onClose={() => setShowExpenseModal(false)}
+          onSuccess={loadData}
+        />
+      )}
+      {showInterestModal && (
+        <CreateInterestModal
+          onClose={() => setShowInterestModal(false)}
+          onSuccess={loadData}
+        />
+      )}
+      {showLossModal && (
+        <CreateLossModal
+          onClose={() => setShowLossModal(false)}
+          onSuccess={loadData}
         />
       )}
     </div>
@@ -158,12 +185,18 @@ function OverviewTab({
   formatCurrency,
   formatPercent,
   maxMonthlyRevenue,
+  onAddExpense,
+  onAddInterest,
+  onAddLoss,
 }: {
   summary: FinancialSummaryData;
   monthly: MonthlySummaryData;
   formatCurrency: (n: number) => string;
   formatPercent: (s: string) => string;
   maxMonthlyRevenue: number;
+  onAddExpense: () => void;
+  onAddInterest: () => void;
+  onAddLoss: () => void;
 }) {
   return (
     <div className="space-y-6">
@@ -332,6 +365,7 @@ function OverviewTab({
                   date: e.expense_date,
                   detail: e.notes || undefined,
                 }))}
+                onAdd={onAddExpense}
               />
 
               {/* MP Fees */}
@@ -358,6 +392,7 @@ function OverviewTab({
                 }))}
                 breakdown={summary.outflows.interests.by_source}
                 breakdownLabel="Por fuente"
+                onAdd={onAddInterest}
               />
 
               {/* Losses */}
@@ -376,6 +411,7 @@ function OverviewTab({
                 }))}
                 breakdown={summary.outflows.losses.by_reason}
                 breakdownLabel="Por razón"
+                onAdd={onAddLoss}
               />
             </div>
           </div>
@@ -661,6 +697,7 @@ function OutflowSection({
   items,
   breakdown,
   breakdownLabel,
+  onAdd,
 }: {
   label: string;
   total: number;
@@ -670,24 +707,36 @@ function OutflowSection({
   items: Array<{ name: string; amount: number; date: string; detail?: string; badge?: string }>;
   breakdown?: Record<string, { total: number; count: number }>;
   breakdownLabel?: string;
+  onAdd?: () => void;
 }) {
   const [expanded, setExpanded] = useState(false);
 
   return (
     <div>
-      <button
-        onClick={() => items.length > 0 && setExpanded(!expanded)}
-        className="w-full flex justify-between items-center hover:bg-kawa-black/30 rounded px-1 py-0.5 transition-colors"
-      >
-        <div className="flex items-center gap-1">
-          <span className="text-gray-400 text-sm">{label}</span>
-          <span className="text-gray-600 text-xs">({count})</span>
-          {items.length > 0 && (
-            expanded ? <ChevronUp size={14} className="text-gray-500" /> : <ChevronDown size={14} className="text-gray-500" />
-          )}
-        </div>
-        <span className={`font-medium ${color}`}>{formatCurrency(total)}</span>
-      </button>
+      <div className="flex items-center gap-1">
+        <button
+          onClick={() => items.length > 0 && setExpanded(!expanded)}
+          className="flex-1 flex justify-between items-center hover:bg-kawa-black/30 rounded px-1 py-0.5 transition-colors"
+        >
+          <div className="flex items-center gap-1">
+            <span className="text-gray-400 text-sm">{label}</span>
+            <span className="text-gray-600 text-xs">({count})</span>
+            {items.length > 0 && (
+              expanded ? <ChevronUp size={14} className="text-gray-500" /> : <ChevronDown size={14} className="text-gray-500" />
+            )}
+          </div>
+          <span className={`font-medium ${color}`}>{formatCurrency(total)}</span>
+        </button>
+        {onAdd && (
+          <button
+            onClick={onAdd}
+            className="p-1 rounded hover:bg-kawa-green/20 text-gray-500 hover:text-kawa-green transition-colors"
+            title={`Agregar ${label.toLowerCase()}`}
+          >
+            <Plus size={14} />
+          </button>
+        )}
+      </div>
 
       {breakdown && Object.keys(breakdown).length > 0 && (
         <div className="pl-4 mt-1 space-y-0.5">
@@ -1126,6 +1175,438 @@ function OrderDetailModal({
             )}
           </div>
         </div>
+      </div>
+    </div>
+  );
+}
+
+// ============ Create Expense Modal ============
+function CreateExpenseModal({
+  onClose,
+  onSuccess,
+}: {
+  onClose: () => void;
+  onSuccess: () => void;
+}) {
+  const [form, setForm] = useState({
+    name: '',
+    amount: '',
+    expense_date: new Date().toISOString().split('T')[0],
+    notes: '',
+  });
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!form.name || !form.amount) {
+      setError('Nombre y monto son obligatorios');
+      return;
+    }
+    try {
+      setSaving(true);
+      setError('');
+      await financialService.createExpense({
+        name: form.name,
+        amount: parseFloat(form.amount),
+        expense_date: form.expense_date,
+        notes: form.notes || undefined,
+      });
+      onSuccess();
+      onClose();
+    } catch {
+      setError('Error al crear el gasto');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
+      <div className="bg-kawa-gray border border-gray-700 rounded-xl w-full max-w-md">
+        <div className="flex items-center justify-between p-5 border-b border-gray-700">
+          <h3 className="text-lg font-semibold text-white">Nuevo Gasto</h3>
+          <button onClick={onClose} className="text-gray-400 hover:text-white transition-colors">
+            <X size={20} />
+          </button>
+        </div>
+        <form onSubmit={handleSubmit} className="p-5 space-y-4">
+          {error && <p className="text-red-400 text-sm">{error}</p>}
+
+          <div>
+            <label className="block text-sm text-gray-400 mb-1">Nombre *</label>
+            <input
+              type="text"
+              value={form.name}
+              onChange={e => setForm({ ...form, name: e.target.value })}
+              className="w-full bg-kawa-black border border-gray-700 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-kawa-green"
+              placeholder="Ej: Arriendo bodega"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm text-gray-400 mb-1">Monto (COP) *</label>
+            <input
+              type="number"
+              value={form.amount}
+              onChange={e => setForm({ ...form, amount: e.target.value })}
+              className="w-full bg-kawa-black border border-gray-700 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-kawa-green"
+              placeholder="0"
+              min="0"
+              step="any"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm text-gray-400 mb-1">Fecha</label>
+            <input
+              type="date"
+              value={form.expense_date}
+              onChange={e => setForm({ ...form, expense_date: e.target.value })}
+              className="w-full bg-kawa-black border border-gray-700 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-kawa-green"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm text-gray-400 mb-1">Notas</label>
+            <textarea
+              value={form.notes}
+              onChange={e => setForm({ ...form, notes: e.target.value })}
+              className="w-full bg-kawa-black border border-gray-700 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-kawa-green resize-none"
+              rows={2}
+              placeholder="Notas opcionales..."
+            />
+          </div>
+
+          <div className="flex gap-3 pt-2">
+            <button
+              type="button"
+              onClick={onClose}
+              className="flex-1 px-4 py-2 bg-gray-800 text-gray-300 rounded-lg hover:bg-gray-700 transition-colors text-sm"
+            >
+              Cancelar
+            </button>
+            <button
+              type="submit"
+              disabled={saving}
+              className="flex-1 px-4 py-2 bg-kawa-green text-kawa-black font-semibold rounded-lg hover:bg-kawa-green/90 transition-colors text-sm disabled:opacity-50"
+            >
+              {saving ? 'Guardando...' : 'Crear Gasto'}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+// ============ Create Interest Modal ============
+function CreateInterestModal({
+  onClose,
+  onSuccess,
+}: {
+  onClose: () => void;
+  onSuccess: () => void;
+}) {
+  const [form, setForm] = useState({
+    name: '',
+    amount: '',
+    source: 'tarjeta_credito',
+    creditor: '',
+    payment_date: new Date().toISOString().split('T')[0],
+    notes: '',
+  });
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
+
+  const sourceOptions = [
+    { value: 'tarjeta_credito', label: 'Tarjeta de Crédito' },
+    { value: 'banco', label: 'Banco' },
+    { value: 'prestamo_personal', label: 'Préstamo Personal' },
+    { value: 'gota_gota', label: 'Gota a Gota' },
+    { value: 'otro', label: 'Otro' },
+  ];
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!form.name || !form.amount) {
+      setError('Nombre y monto son obligatorios');
+      return;
+    }
+    try {
+      setSaving(true);
+      setError('');
+      await financialService.createInterest({
+        name: form.name,
+        amount: parseFloat(form.amount),
+        source: form.source,
+        creditor: form.creditor || undefined,
+        payment_date: form.payment_date,
+        notes: form.notes || undefined,
+      });
+      onSuccess();
+      onClose();
+    } catch {
+      setError('Error al crear el interés');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
+      <div className="bg-kawa-gray border border-gray-700 rounded-xl w-full max-w-md">
+        <div className="flex items-center justify-between p-5 border-b border-gray-700">
+          <h3 className="text-lg font-semibold text-white">Nuevo Interés</h3>
+          <button onClick={onClose} className="text-gray-400 hover:text-white transition-colors">
+            <X size={20} />
+          </button>
+        </div>
+        <form onSubmit={handleSubmit} className="p-5 space-y-4">
+          {error && <p className="text-red-400 text-sm">{error}</p>}
+
+          <div>
+            <label className="block text-sm text-gray-400 mb-1">Nombre *</label>
+            <input
+              type="text"
+              value={form.name}
+              onChange={e => setForm({ ...form, name: e.target.value })}
+              className="w-full bg-kawa-black border border-gray-700 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-kawa-green"
+              placeholder="Ej: Interés tarjeta Bancolombia"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm text-gray-400 mb-1">Monto (COP) *</label>
+            <input
+              type="number"
+              value={form.amount}
+              onChange={e => setForm({ ...form, amount: e.target.value })}
+              className="w-full bg-kawa-black border border-gray-700 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-kawa-green"
+              placeholder="0"
+              min="0"
+              step="any"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm text-gray-400 mb-1">Fuente</label>
+            <select
+              value={form.source}
+              onChange={e => setForm({ ...form, source: e.target.value })}
+              className="w-full bg-kawa-black border border-gray-700 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-kawa-green"
+            >
+              {sourceOptions.map(opt => (
+                <option key={opt.value} value={opt.value}>{opt.label}</option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-sm text-gray-400 mb-1">Acreedor</label>
+            <input
+              type="text"
+              value={form.creditor}
+              onChange={e => setForm({ ...form, creditor: e.target.value })}
+              className="w-full bg-kawa-black border border-gray-700 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-kawa-green"
+              placeholder="Ej: Bancolombia"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm text-gray-400 mb-1">Fecha de Pago</label>
+            <input
+              type="date"
+              value={form.payment_date}
+              onChange={e => setForm({ ...form, payment_date: e.target.value })}
+              className="w-full bg-kawa-black border border-gray-700 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-kawa-green"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm text-gray-400 mb-1">Notas</label>
+            <textarea
+              value={form.notes}
+              onChange={e => setForm({ ...form, notes: e.target.value })}
+              className="w-full bg-kawa-black border border-gray-700 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-kawa-green resize-none"
+              rows={2}
+              placeholder="Notas opcionales..."
+            />
+          </div>
+
+          <div className="flex gap-3 pt-2">
+            <button
+              type="button"
+              onClick={onClose}
+              className="flex-1 px-4 py-2 bg-gray-800 text-gray-300 rounded-lg hover:bg-gray-700 transition-colors text-sm"
+            >
+              Cancelar
+            </button>
+            <button
+              type="submit"
+              disabled={saving}
+              className="flex-1 px-4 py-2 bg-kawa-green text-kawa-black font-semibold rounded-lg hover:bg-kawa-green/90 transition-colors text-sm disabled:opacity-50"
+            >
+              {saving ? 'Guardando...' : 'Crear Interés'}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+// ============ Create Loss Modal ============
+function CreateLossModal({
+  onClose,
+  onSuccess,
+}: {
+  onClose: () => void;
+  onSuccess: () => void;
+}) {
+  const [form, setForm] = useState({
+    name: '',
+    amount: '',
+    reason: 'envio_perdido',
+    order_id: '',
+    loss_date: new Date().toISOString().split('T')[0],
+    notes: '',
+  });
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
+
+  const reasonOptions = [
+    { value: 'envio_perdido', label: 'Envío Perdido' },
+    { value: 'cliente_no_pago', label: 'Cliente No Pagó' },
+    { value: 'devolucion', label: 'Devolución' },
+    { value: 'producto_dañado', label: 'Producto Dañado' },
+    { value: 'otro', label: 'Otro' },
+  ];
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!form.name || !form.amount) {
+      setError('Nombre y monto son obligatorios');
+      return;
+    }
+    try {
+      setSaving(true);
+      setError('');
+      await financialService.createLoss({
+        name: form.name,
+        amount: parseFloat(form.amount),
+        reason: form.reason,
+        order_id: form.order_id || undefined,
+        loss_date: form.loss_date,
+        notes: form.notes || undefined,
+      });
+      onSuccess();
+      onClose();
+    } catch {
+      setError('Error al crear la pérdida');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
+      <div className="bg-kawa-gray border border-gray-700 rounded-xl w-full max-w-md">
+        <div className="flex items-center justify-between p-5 border-b border-gray-700">
+          <h3 className="text-lg font-semibold text-white">Nueva Pérdida</h3>
+          <button onClick={onClose} className="text-gray-400 hover:text-white transition-colors">
+            <X size={20} />
+          </button>
+        </div>
+        <form onSubmit={handleSubmit} className="p-5 space-y-4">
+          {error && <p className="text-red-400 text-sm">{error}</p>}
+
+          <div>
+            <label className="block text-sm text-gray-400 mb-1">Nombre *</label>
+            <input
+              type="text"
+              value={form.name}
+              onChange={e => setForm({ ...form, name: e.target.value })}
+              className="w-full bg-kawa-black border border-gray-700 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-kawa-green"
+              placeholder="Ej: Paquete perdido por transportadora"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm text-gray-400 mb-1">Monto (COP) *</label>
+            <input
+              type="number"
+              value={form.amount}
+              onChange={e => setForm({ ...form, amount: e.target.value })}
+              className="w-full bg-kawa-black border border-gray-700 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-kawa-green"
+              placeholder="0"
+              min="0"
+              step="any"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm text-gray-400 mb-1">Razón</label>
+            <select
+              value={form.reason}
+              onChange={e => setForm({ ...form, reason: e.target.value })}
+              className="w-full bg-kawa-black border border-gray-700 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-kawa-green"
+            >
+              {reasonOptions.map(opt => (
+                <option key={opt.value} value={opt.value}>{opt.label}</option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-sm text-gray-400 mb-1">ID de Orden</label>
+            <input
+              type="text"
+              value={form.order_id}
+              onChange={e => setForm({ ...form, order_id: e.target.value })}
+              className="w-full bg-kawa-black border border-gray-700 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-kawa-green"
+              placeholder="Opcional - ID de la orden relacionada"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm text-gray-400 mb-1">Fecha</label>
+            <input
+              type="date"
+              value={form.loss_date}
+              onChange={e => setForm({ ...form, loss_date: e.target.value })}
+              className="w-full bg-kawa-black border border-gray-700 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-kawa-green"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm text-gray-400 mb-1">Notas</label>
+            <textarea
+              value={form.notes}
+              onChange={e => setForm({ ...form, notes: e.target.value })}
+              className="w-full bg-kawa-black border border-gray-700 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-kawa-green resize-none"
+              rows={2}
+              placeholder="Notas opcionales..."
+            />
+          </div>
+
+          <div className="flex gap-3 pt-2">
+            <button
+              type="button"
+              onClick={onClose}
+              className="flex-1 px-4 py-2 bg-gray-800 text-gray-300 rounded-lg hover:bg-gray-700 transition-colors text-sm"
+            >
+              Cancelar
+            </button>
+            <button
+              type="submit"
+              disabled={saving}
+              className="flex-1 px-4 py-2 bg-kawa-green text-kawa-black font-semibold rounded-lg hover:bg-kawa-green/90 transition-colors text-sm disabled:opacity-50"
+            >
+              {saving ? 'Guardando...' : 'Crear Pérdida'}
+            </button>
+          </div>
+        </form>
       </div>
     </div>
   );

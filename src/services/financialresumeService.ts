@@ -19,4 +19,38 @@ export const financialService = {
     const response = await api.get<ApiResponse<MonthlySummaryData>>(`/financial/monthly${params}`);
     return response.data.data;
   },
+
+  async createExpense(data: {
+    name: string;
+    amount: number;
+    expense_date: string;
+    notes?: string;
+  }) {
+    const response = await api.post<ApiResponse<unknown>>('/expenses', data);
+    return response.data;
+  },
+
+  async createInterest(data: {
+    name: string;
+    amount: number;
+    source: string;
+    creditor?: string;
+    payment_date: string;
+    notes?: string;
+  }) {
+    const response = await api.post('/interest-payments', data);
+    return response.data;
+  },
+
+  async createLoss(data: {
+    name: string;
+    amount: number;
+    reason: string;
+    order_id?: string;
+    loss_date: string;
+    notes?: string;
+  }) {
+    const response = await api.post('/losses', data);
+    return response.data;
+  },
 };

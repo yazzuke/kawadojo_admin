@@ -195,14 +195,26 @@ export default function BatchesPage() {
                     </span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-white text-sm">Ganancia:</span>
+                    <span className="text-white text-sm">Ganancia Bruta:</span>
                     <span className="text-green-400 font-medium">
                       {formatCurrency(summary.potential.total_potential_profit)}
                     </span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-white text-sm">ROI:</span>
+                    <span className="text-white text-sm">ROI Bruto:</span>
                     <span className="text-kawa-green font-bold">{summary.potential.average_roi}</span>
+                  </div>
+                  <div className="flex justify-between pt-1 border-t border-gray-700">
+                    <span className="text-white text-sm">Ganancia Neta:</span>
+                    <span className={`font-medium ${summary.potential.total_potential_profit_net >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                      {formatCurrency(summary.potential.total_potential_profit_net)}
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-white text-sm">ROI Neto:</span>
+                    <span className={`font-bold ${parseFloat(summary.potential.net_roi) >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                      {summary.potential.net_roi}
+                    </span>
                   </div>
                 </div>
               </div>
@@ -219,9 +231,9 @@ export default function BatchesPage() {
                     </span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-white text-sm">Gastos:</span>
+                    <span className="text-white text-sm">Egresos:</span>
                     <span className="text-red-400 font-medium">
-                      {formatCurrency(summary.expenses.total)}
+                      {formatCurrency(summary.actual.total_outflows)}
                     </span>
                   </div>
                   <div className="flex justify-between">
@@ -287,6 +299,40 @@ export default function BatchesPage() {
                     </div>
                   </div>
                 </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Outflows Breakdown */}
+          <div className="bg-kawa-gray p-6 rounded-lg shadow-sm border border-gray-800">
+            <h3 className="text-white font-semibold mb-4">Desglose de Egresos</h3>
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              <div className="bg-kawa-black p-4 rounded-lg border border-gray-700">
+                <p className="text-xs text-gray-400 mb-1">Gastos Operativos</p>
+                <p className="text-lg font-bold text-red-400">
+                  {formatCurrency(summary.outflows_summary.expenses)}
+                </p>
+                <p className="text-xs text-gray-500 mt-1">{summary.expenses.count} registros</p>
+              </div>
+              <div className="bg-kawa-black p-4 rounded-lg border border-gray-700">
+                <p className="text-xs text-gray-400 mb-1">Intereses</p>
+                <p className="text-lg font-bold text-yellow-400">
+                  {formatCurrency(summary.outflows_summary.interests)}
+                </p>
+                <p className="text-xs text-gray-500 mt-1">{summary.interests.count} registros</p>
+              </div>
+              <div className="bg-kawa-black p-4 rounded-lg border border-gray-700">
+                <p className="text-xs text-gray-400 mb-1">Pérdidas</p>
+                <p className="text-lg font-bold text-orange-400">
+                  {formatCurrency(summary.outflows_summary.losses)}
+                </p>
+                <p className="text-xs text-gray-500 mt-1">{summary.losses.count} registros</p>
+              </div>
+              <div className="bg-kawa-black p-4 rounded-lg border border-red-800">
+                <p className="text-xs text-gray-400 mb-1">Total Egresos</p>
+                <p className="text-xl font-bold text-red-400">
+                  {formatCurrency(summary.outflows_summary.total)}
+                </p>
               </div>
             </div>
           </div>

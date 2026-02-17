@@ -11,6 +11,7 @@ import BatchesPage from './pages/Batches';
 import OrdersPage from './pages/Orders';
 import BatchInfoPage from './pages/Batchinfo';
 import OrderInfoPage from './pages/OrderInfo';
+import FinancialResumePage from './pages/FinancialResume';
 
 function App() {
   return (
@@ -31,6 +32,7 @@ function App() {
               <Route path="/batches/:id" element={<BatchInfoPage />} />
               <Route path="/orders" element={<OrdersPage />} />
               <Route path="/orders/:id" element={<OrderInfoPage />} />
+              <Route path="/financial" element={<FinancialResumePage />} />
             </Route>
           </Route>
 

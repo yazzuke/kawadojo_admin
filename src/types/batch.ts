@@ -132,15 +132,16 @@ export interface BatchSummary {
     total_potential_revenue: number;
     total_potential_profit: number;
     average_roi: string;
+    total_potential_profit_net: number;
+    net_roi: string;
   };
   actual: {
     total_sold_units: number;
     remaining_units: number;
     total_actual_revenue: number;
-    total_expenses: number;
+    total_outflows: number;
     real_profit: number;
     sales_margin: string;
-    total_actual_profit: number;
     profit_vs_investment: number;
     actual_roi: string;
     completion_percentage: string;
@@ -148,6 +149,30 @@ export interface BatchSummary {
   expenses: {
     total: number;
     count: number;
+  };
+  interests: {
+    total: number;
+    count: number;
+    by_source: Array<{
+      source: string;
+      total: number;
+      count: number;
+    }>;
+  };
+  losses: {
+    total: number;
+    count: number;
+    by_reason: Array<{
+      reason: string;
+      total: number;
+      count: number;
+    }>;
+  };
+  outflows_summary: {
+    expenses: number;
+    interests: number;
+    losses: number;
+    total: number;
   };
   by_status: {
     ordered: number;

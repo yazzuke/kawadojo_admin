@@ -7,6 +7,7 @@ import type {
   TopProduct,
   OrdersByStatus,
   UpdateOrderStatusData,
+  UpdateOrderData,
   VerifyTransferData,
   VerifyCashData,
 } from '../types/order';
@@ -115,6 +116,12 @@ export const orderService = {
     const response = await api.put<Order>(`/orders/${orderId}/items/${itemId}`, {
       product_price: productPrice,
     });
+    return response.data;
+  },
+
+  // Actualizar datos de la orden (envío, descuento, etc.)
+  async updateOrder(id: string, data: UpdateOrderData): Promise<Order> {
+    const response = await api.patch<Order>(`/orders/${id}`, data);
     return response.data;
   },
 };

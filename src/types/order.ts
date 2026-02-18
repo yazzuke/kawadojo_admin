@@ -182,6 +182,11 @@ export interface VerifyCashData {
   admin_notes?: string;
 }
 
+export interface UpdateOrderData {
+  shipping_cost?: number;
+  discount?: number;
+}
+
 export const ORDER_STATUSES = [
   { value: 'pending', label: 'Pendiente', color: 'bg-gray-500' },
   { value: 'payment_pending', label: 'Pago Pendiente', color: 'bg-yellow-500' },

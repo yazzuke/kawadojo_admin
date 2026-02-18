@@ -43,6 +43,9 @@ export default function OrderInfoPage() {
     admin_notes: '',
   });
   const [editingItem, setEditingItem] = useState<OrderItem | null>(null);
+  const [isEditingOrder, setIsEditingOrder] = useState(false);
+  const [editShipping, setEditShipping] = useState('');
+  const [editDiscount, setEditDiscount] = useState('');
 
   useEffect(() => {
     if (id) {
@@ -150,6 +153,29 @@ export default function OrderInfoPage() {
     } catch (error) {
       console.error('Error updating item price:', error);
       throw error;
+    }
+  };
+
+  const handleStartEditOrder = () => {
+    if (!order) return;
+    setEditShipping(order.shipping_cost.toString());
+    setEditDiscount(order.discount.toString());
+    setIsEditingOrder(true);
+  };
+
+  const handleUpdateOrder = async () => {
+    if (!order) return;
+
+    try {
+      await orderService.updateOrder(order.id, {
+        shipping_cost: parseFloat(editShipping) || 0,
+        discount: parseFloat(editDiscount) || 0,
+      });
+      await loadOrder();
+      setIsEditingOrder(false);
+    } catch (error) {
+      console.error('Error updating order:', error);
+      alert('Error al actualizar la orden');
     }
   };
 
@@ -324,20 +350,73 @@ export default function OrderInfoPage() {
 
             {/* Order Summary */}
             <div className="mt-6 pt-6 border-t border-gray-700 space-y-2">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-sm text-gray-500 uppercase tracking-wider">Resumen</span>
+                {!isEditingOrder ? (
+                  <button
+                    onClick={handleStartEditOrder}
+                    className="p-1.5 text-gray-400 hover:text-kawa-green transition-colors"
+                    title="Editar orden"
+                  >
+                    <Edit size={16} />
+                  </button>
+                ) : (
+                  <div className="flex items-center gap-1">
+                    <button
+                      onClick={handleUpdateOrder}
+                      className="p-1.5 text-kawa-green hover:text-green-400 transition-colors"
+                      title="Guardar"
+                    >
+                      <Save size={16} />
+                    </button>
+                    <button
+                      onClick={() => setIsEditingOrder(false)}
+                      className="p-1.5 text-gray-400 hover:text-white transition-colors"
+                      title="Cancelar"
+                    >
+                      <X size={16} />
+                    </button>
+                  </div>
+                )}
+              </div>
+
               <div className="flex justify-between text-gray-300">
                 <span>Subtotal:</span>
                 <span>{formatCurrency(order.subtotal)}</span>
               </div>
-              <div className="flex justify-between text-gray-300">
+
+              <div className="flex justify-between items-center text-gray-300">
                 <span>Envío:</span>
-                <span>{formatCurrency(order.shipping_cost)}</span>
+                {isEditingOrder ? (
+                  <input
+                    type="number"
+                    value={editShipping}
+                    onChange={(e) => setEditShipping(e.target.value)}
+                    className="w-32 px-2 py-1 bg-kawa-black border border-gray-700 rounded text-white text-right text-sm focus:outline-none focus:border-kawa-green"
+                    min="0"
+                    step="1000"
+                  />
+                ) : (
+                  <span>{formatCurrency(order.shipping_cost)}</span>
+                )}
               </div>
-              {order.discount > 0 && (
-                <div className="flex justify-between text-green-400">
-                  <span>Descuento:</span>
-                  <span>-{formatCurrency(order.discount)}</span>
-                </div>
-              )}
+
+              <div className="flex justify-between items-center text-green-400">
+                <span>Descuento:</span>
+                {isEditingOrder ? (
+                  <input
+                    type="number"
+                    value={editDiscount}
+                    onChange={(e) => setEditDiscount(e.target.value)}
+                    className="w-32 px-2 py-1 bg-kawa-black border border-gray-700 rounded text-white text-right text-sm focus:outline-none focus:border-kawa-green"
+                    min="0"
+                    step="1000"
+                  />
+                ) : (
+                  <span>{order.discount > 0 ? `-${formatCurrency(order.discount)}` : formatCurrency(0)}</span>
+                )}
+              </div>
+
               <div className="flex justify-between text-xl font-bold text-white pt-2 border-t border-gray-700">
                 <span>Total:</span>
                 <span>{formatCurrency(order.total)}</span>
@@ -348,8 +427,8 @@ export default function OrderInfoPage() {
                   <span>{formatCurrency(order.total_cost)}</span>
                 </div>
               )}
-              {order.profit > 0 && (
-                <div className="flex justify-between text-sm text-kawa-green">
+              {order.profit !== 0 && (
+                <div className={`flex justify-between text-sm ${order.profit >= 0 ? 'text-kawa-green' : 'text-red-400'}`}>
                   <span>Ganancia:</span>
                   <span>{formatCurrency(order.profit)}</span>
                 </div>

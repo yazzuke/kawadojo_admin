@@ -33,6 +33,8 @@ export default function ProductModal({ product, onClose, onSuccess }: ProductMod
 
   const [images, setImages] = useState<File[]>([]);
   const [previewUrls, setPreviewUrls] = useState<string[]>([]);
+  const [existingImages, setExistingImages] = useState<{ id: string; url: string }[]>([]);
+  const [deletedImageIds, setDeletedImageIds] = useState<string[]>([]);
 
   useEffect(() => {
     loadData();
@@ -53,7 +55,7 @@ export default function ProductModal({ product, onClose, onSuccess }: ProductMod
         category_id: product.category_id,
         compatible_models: product.compatible_models.map((m) => m.id),
       });
-      setPreviewUrls(product.images.map((img) => img.url));
+      setExistingImages(product.images.map((img) => ({ id: img.id, url: img.url })));
     }
   }, [product]);
 
@@ -96,20 +98,16 @@ export default function ProductModal({ product, onClose, onSuccess }: ProductMod
     setPreviewUrls([...previewUrls, ...newPreviews]);
   };
 
-  const removeImage = (index: number) => {
-    const newImages = [...images];
-    const newPreviews = [...previewUrls];
-    
-    // Revoke URL to free memory
-    if (newPreviews[index].startsWith('blob:')) {
-      URL.revokeObjectURL(newPreviews[index]);
-    }
-    
-    newImages.splice(index, 1);
-    newPreviews.splice(index, 1);
-    
-    setImages(newImages);
-    setPreviewUrls(newPreviews);
+  const removeExistingImage = (index: number) => {
+    const imageToRemove = existingImages[index];
+    setDeletedImageIds([...deletedImageIds, imageToRemove.id]);
+    setExistingImages(existingImages.filter((_, i) => i !== index));
+  };
+
+  const removeNewImage = (index: number) => {
+    URL.revokeObjectURL(previewUrls[index]);
+    setImages(images.filter((_, i) => i !== index));
+    setPreviewUrls(previewUrls.filter((_, i) => i !== index));
   };
 
   const toggleModel = (modelId: string) => {
@@ -146,6 +144,7 @@ export default function ProductModal({ product, onClose, onSuccess }: ProductMod
         category_id: formData.category_id,
         compatible_models: formData.compatible_models,
         images: images,
+        deleted_images: deletedImageIds.length > 0 ? deletedImageIds : undefined,
       };
 
       if (product) {
@@ -357,8 +356,26 @@ export default function ProductModal({ product, onClose, onSuccess }: ProductMod
               Imágenes
             </label>
             <div className="grid grid-cols-4 gap-2 mb-2">
+              {/* Existing images from server */}
+              {existingImages.map((img, index) => (
+                <div key={`existing-${img.id}`} className="relative aspect-square">
+                  <img
+                    src={img.url}
+                    alt={`Existing ${index}`}
+                    className="w-full h-full object-cover rounded-lg"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => removeExistingImage(index)}
+                    className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 rounded-full flex items-center justify-center text-white"
+                  >
+                    <X size={14} />
+                  </button>
+                </div>
+              ))}
+              {/* New images to upload */}
               {previewUrls.map((url, index) => (
-                <div key={index} className="relative aspect-square">
+                <div key={`new-${index}`} className="relative aspect-square">
                   <img
                     src={url}
                     alt={`Preview ${index}`}
@@ -366,7 +383,7 @@ export default function ProductModal({ product, onClose, onSuccess }: ProductMod
                   />
                   <button
                     type="button"
-                    onClick={() => removeImage(index)}
+                    onClick={() => removeNewImage(index)}
                     className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 rounded-full flex items-center justify-center text-white"
                   >
                     <X size={14} />

@@ -55,4 +55,5 @@ export interface CreateProductData {
   category_id: string;
   compatible_models: string[];
   images: File[];
+  deleted_images?: string[];
 }

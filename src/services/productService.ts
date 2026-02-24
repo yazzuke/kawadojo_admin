@@ -68,6 +68,10 @@ export const productService = {
         formData.append('compatible_models', modelId);
       });
     }
+
+    if (data.deleted_images && data.deleted_images.length > 0) {
+      formData.append('deleted_images', JSON.stringify(data.deleted_images));
+    }
     
     if (data.images) {
       data.images.forEach((image) => {

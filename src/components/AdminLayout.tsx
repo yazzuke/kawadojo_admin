@@ -10,7 +10,8 @@ import {
   Bike,
   ShipWheel,
   ShoppingBag,
-  TrendingUp
+  TrendingUp,
+  MessageSquare
 } from 'lucide-react';
 import { useState } from 'react';
 
@@ -22,6 +23,7 @@ const navItems = [
   { to: '/batches', icon: ShipWheel, label: 'Lotes' },
   { to: '/orders', icon: ShoppingBag, label: 'Órdenes' },
   { to: '/financial', icon: TrendingUp, label: 'Finanzas' },
+  { to: '/reviews', icon: MessageSquare, label: 'Reseñas' },
 ];
 
 export default function AdminLayout() {

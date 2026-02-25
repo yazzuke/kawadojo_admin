@@ -12,6 +12,9 @@ import OrdersPage from './pages/Orders';
 import BatchInfoPage from './pages/Batchinfo';
 import OrderInfoPage from './pages/OrderInfo';
 import FinancialResumePage from './pages/FinancialResume';
+import ReviewsPage from './pages/Reviews';
+import ClientReviewPage from './pages/ClientReview';
+import TestimonialsPage from './pages/Testimonials';
 
 function App() {
   return (
@@ -20,6 +23,8 @@ function App() {
         <Routes>
           {/* Public routes */}
           <Route path="/login" element={<Login />} />
+          <Route path="/review/:token" element={<ClientReviewPage />} />
+          <Route path="/testimonios" element={<TestimonialsPage />} />
 
           {/* Protected routes */}
           <Route element={<ProtectedRoute />}>
@@ -33,6 +38,7 @@ function App() {
               <Route path="/orders" element={<OrdersPage />} />
               <Route path="/orders/:id" element={<OrderInfoPage />} />
               <Route path="/financial" element={<FinancialResumePage />} />
+              <Route path="/reviews" element={<ReviewsPage />} />
             </Route>
           </Route>
 

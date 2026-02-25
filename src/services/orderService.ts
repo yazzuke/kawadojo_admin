@@ -8,6 +8,7 @@ import type {
   OrdersByStatus,
   UpdateOrderStatusData,
   UpdateOrderData,
+  UpdateAddressData,
   VerifyTransferData,
   VerifyCashData,
 } from '../types/order';
@@ -122,6 +123,12 @@ export const orderService = {
   // Actualizar datos de la orden (envío, descuento, etc.)
   async updateOrder(id: string, data: UpdateOrderData): Promise<Order> {
     const response = await api.patch<Order>(`/orders/${id}`, data);
+    return response.data;
+  },
+
+  // Actualizar dirección de envío de la orden
+  async updateAddress(orderId: string, data: UpdateAddressData): Promise<Order> {
+    const response = await api.put<Order>(`/orders/${orderId}/address`, data);
     return response.data;
   },
 };

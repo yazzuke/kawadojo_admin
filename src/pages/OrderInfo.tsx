@@ -47,6 +47,20 @@ export default function OrderInfoPage() {
   const [editShipping, setEditShipping] = useState('');
   const [editDiscount, setEditDiscount] = useState('');
 
+  // Address editing states
+  const [isEditingAddress, setIsEditingAddress] = useState(false);
+  const [addressData, setAddressData] = useState({
+    label: '',
+    street: '',
+    number: '',
+    apartment: '',
+    city: '',
+    state: '',
+    zip_code: '',
+    country: '',
+    phone: '',
+  });
+
   useEffect(() => {
     if (id) {
       loadOrder();
@@ -179,6 +193,37 @@ export default function OrderInfoPage() {
     }
   };
 
+  const handleStartEditAddress = () => {
+    if (!order?.address) return;
+    setAddressData({
+      label: order.address.label || '',
+      street: order.address.street || '',
+      number: order.address.number || '',
+      apartment: order.address.apartment || '',
+      city: order.address.city || '',
+      state: order.address.state || '',
+      zip_code: order.address.zip_code || '',
+      country: order.address.country || 'Colombia',
+      phone: order.address.phone || '',
+    });
+    setIsEditingAddress(true);
+  };
+
+  const handleUpdateAddress = async () => {
+    if (!order) return;
+
+    try {
+      await orderService.updateAddress(order.id, addressData);
+      await loadOrder();
+      setIsEditingAddress(false);
+    } catch (error: unknown) {
+      console.error('Error updating address:', error);
+      const axiosError = error as { response?: { data?: { error?: string } } };
+      const message = axiosError.response?.data?.error || 'Error al actualizar la dirección';
+      alert(message);
+    }
+  };
+
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('es-CO', {
       style: 'currency',
@@ -283,9 +328,20 @@ export default function OrderInfoPage() {
 
           {/* Shipping Address */}
           <div className="bg-kawa-gray p-6 rounded-lg border border-gray-800">
-            <div className="flex items-center gap-2 mb-4">
-              <MapPin className="text-kawa-green" size={20} />
-              <h2 className="text-xl font-semibold text-white">Dirección de Envío</h2>
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2">
+                <MapPin className="text-kawa-green" size={20} />
+                <h2 className="text-xl font-semibold text-white">Dirección de Envío</h2>
+              </div>
+              {order.address && (
+                <button
+                  onClick={handleStartEditAddress}
+                  className="p-1.5 text-gray-400 hover:text-kawa-green transition-colors"
+                  title="Editar dirección"
+                >
+                  <Edit size={18} />
+                </button>
+              )}
             </div>
             {order.address ? (
               <div className="space-y-2">
@@ -747,6 +803,146 @@ export default function OrderInfoPage() {
           onClose={() => setEditingItem(null)}
           onSave={handleUpdateItemPrice}
         />
+      )}
+
+      {/* Edit Address Modal */}
+      {isEditingAddress && (
+        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
+          <div className="bg-kawa-gray rounded-xl border border-gray-800 w-full max-w-lg max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between p-4 border-b border-gray-800">
+              <div className="flex items-center gap-2">
+                <MapPin className="text-kawa-green" size={20} />
+                <h2 className="text-lg font-semibold text-white">Editar Dirección de Envío</h2>
+              </div>
+              <button
+                onClick={() => setIsEditingAddress(false)}
+                className="text-gray-400 hover:text-white transition-colors"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <div className="p-4 space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-1">Etiqueta</label>
+                <input
+                  type="text"
+                  value={addressData.label}
+                  onChange={(e) => setAddressData({ ...addressData, label: e.target.value })}
+                  placeholder="Ej: Casa, Trabajo..."
+                  className="w-full px-3 py-2 bg-kawa-black border border-gray-700 rounded-lg text-white focus:ring-2 focus:ring-kawa-green focus:border-transparent"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-1">Calle / Dirección</label>
+                <input
+                  type="text"
+                  value={addressData.street}
+                  onChange={(e) => setAddressData({ ...addressData, street: e.target.value })}
+                  placeholder="Ej: Cra 5"
+                  className="w-full px-3 py-2 bg-kawa-black border border-gray-700 rounded-lg text-white focus:ring-2 focus:ring-kawa-green focus:border-transparent"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-300 mb-1">Número</label>
+                  <input
+                    type="text"
+                    value={addressData.number}
+                    onChange={(e) => setAddressData({ ...addressData, number: e.target.value })}
+                    placeholder="Ej: 12-34"
+                    className="w-full px-3 py-2 bg-kawa-black border border-gray-700 rounded-lg text-white focus:ring-2 focus:ring-kawa-green focus:border-transparent"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-300 mb-1">Apartamento / Unidad</label>
+                  <input
+                    type="text"
+                    value={addressData.apartment}
+                    onChange={(e) => setAddressData({ ...addressData, apartment: e.target.value })}
+                    placeholder="Ej: Apt 301"
+                    className="w-full px-3 py-2 bg-kawa-black border border-gray-700 rounded-lg text-white focus:ring-2 focus:ring-kawa-green focus:border-transparent"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-300 mb-1">Ciudad</label>
+                  <input
+                    type="text"
+                    value={addressData.city}
+                    onChange={(e) => setAddressData({ ...addressData, city: e.target.value })}
+                    placeholder="Ej: Bogotá"
+                    className="w-full px-3 py-2 bg-kawa-black border border-gray-700 rounded-lg text-white focus:ring-2 focus:ring-kawa-green focus:border-transparent"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-300 mb-1">Departamento / Estado</label>
+                  <input
+                    type="text"
+                    value={addressData.state}
+                    onChange={(e) => setAddressData({ ...addressData, state: e.target.value })}
+                    placeholder="Ej: Cundinamarca"
+                    className="w-full px-3 py-2 bg-kawa-black border border-gray-700 rounded-lg text-white focus:ring-2 focus:ring-kawa-green focus:border-transparent"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-300 mb-1">Código Postal</label>
+                  <input
+                    type="text"
+                    value={addressData.zip_code}
+                    onChange={(e) => setAddressData({ ...addressData, zip_code: e.target.value })}
+                    placeholder="Ej: 110111"
+                    className="w-full px-3 py-2 bg-kawa-black border border-gray-700 rounded-lg text-white focus:ring-2 focus:ring-kawa-green focus:border-transparent"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-300 mb-1">País</label>
+                  <input
+                    type="text"
+                    value={addressData.country}
+                    onChange={(e) => setAddressData({ ...addressData, country: e.target.value })}
+                    placeholder="Ej: Colombia"
+                    className="w-full px-3 py-2 bg-kawa-black border border-gray-700 rounded-lg text-white focus:ring-2 focus:ring-kawa-green focus:border-transparent"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-1">Teléfono</label>
+                <input
+                  type="text"
+                  value={addressData.phone}
+                  onChange={(e) => setAddressData({ ...addressData, phone: e.target.value })}
+                  placeholder="Ej: 3001234567"
+                  className="w-full px-3 py-2 bg-kawa-black border border-gray-700 rounded-lg text-white focus:ring-2 focus:ring-kawa-green focus:border-transparent"
+                />
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-3 p-4 border-t border-gray-800">
+              <button
+                onClick={() => setIsEditingAddress(false)}
+                className="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition-colors"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handleUpdateAddress}
+                className="flex items-center gap-2 px-4 py-2 bg-kawa-green hover:bg-green-600 text-white font-medium rounded-lg transition-colors"
+              >
+                <Save size={18} />
+                Guardar
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

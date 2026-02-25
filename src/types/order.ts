@@ -187,6 +187,18 @@ export interface UpdateOrderData {
   discount?: number;
 }
 
+export interface UpdateAddressData {
+  label?: string;
+  street?: string;
+  number?: string;
+  apartment?: string;
+  city?: string;
+  state?: string;
+  zip_code?: string;
+  country?: string;
+  phone?: string;
+}
+
 export const ORDER_STATUSES = [
   { value: 'pending', label: 'Pendiente', color: 'bg-gray-500' },
   { value: 'payment_pending', label: 'Pago Pendiente', color: 'bg-yellow-500' },

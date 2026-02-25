@@ -1,6 +1,6 @@
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
-import { Star, Upload, CheckCircle, Package, Calendar, Play } from 'lucide-react';
+import { Star, CheckCircle, Package, Calendar, Play } from 'lucide-react';
 import { reviewService } from '../services/reviewService';
 import type { ReviewTokenData } from '../types/review';
 
@@ -17,11 +17,6 @@ export default function ClientReviewPage() {
   const [customerName, setCustomerName] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
-
-  // File upload
-  const [customerFile, setCustomerFile] = useState<File | null>(null);
-  const [uploadingFile, setUploadingFile] = useState(false);
-  const fileRef = useRef<HTMLInputElement>(null);
 
   // Video player
   const [playingVideo, setPlayingVideo] = useState<string | null>(null);
@@ -56,17 +51,6 @@ export default function ClientReviewPage() {
     }
     try {
       setSubmitting(true);
-
-      // Upload customer file first if selected
-      if (customerFile) {
-        setUploadingFile(true);
-        try {
-          await reviewService.uploadCustomerMedia(token!, customerFile);
-        } catch (e) {
-          console.error('Error uploading file:', e);
-        }
-        setUploadingFile(false);
-      }
 
       await reviewService.submitByToken(token!, {
         rating,
@@ -287,7 +271,7 @@ export default function ClientReviewPage() {
 
             {/* Comment */}
             <div>
-              <label className="block text-sm text-gray-400 mb-1">Comentario (opcional)</label>
+              <label className="block text-sm text-gray-400 mb-1">Comentario</label>
               <textarea
                 value={comment}
                 onChange={(e) => setComment(e.target.value)}
@@ -297,42 +281,13 @@ export default function ClientReviewPage() {
               />
             </div>
 
-            {/* Customer file upload */}
-            <div>
-              <label className="block text-sm text-gray-400 mb-1">Sube una foto o video (opcional)</label>
-              <div
-                className="border-2 border-dashed border-gray-700 rounded-lg p-4 text-center cursor-pointer hover:border-kawa-green transition-colors"
-                onClick={() => fileRef.current?.click()}
-              >
-                <input
-                  ref={fileRef}
-                  type="file"
-                  accept="image/*,video/*"
-                  className="hidden"
-                  onChange={(e) => setCustomerFile(e.target.files?.[0] || null)}
-                />
-                {customerFile ? (
-                  <p className="text-kawa-green text-sm">{customerFile.name}</p>
-                ) : (
-                  <div className="space-y-1">
-                    <Upload size={24} className="mx-auto text-gray-500" />
-                    <p className="text-gray-500 text-sm">Toca para seleccionar</p>
-                  </div>
-                )}
-              </div>
-            </div>
-
             {/* Submit */}
             <button
               onClick={handleSubmit}
               disabled={!rating || submitting}
               className="w-full py-3 bg-kawa-green hover:bg-kawa-green-dark text-black font-bold rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-lg"
             >
-              {submitting
-                ? uploadingFile
-                  ? 'Subiendo archivo...'
-                  : 'Enviando...'
-                : 'Enviar Reseña'}
+              {submitting ? 'Enviando...' : 'Enviar Reseña'}
             </button>
           </div>
         )}

@@ -7,11 +7,12 @@ import type { Product, Category, CompatibleModel, CreateProductData } from '../t
 
 interface ProductModalProps {
   product: Product | null;
+  initialData?: Partial<Product>;
   onClose: () => void;
   onSuccess: () => void;
 }
 
-export default function ProductModal({ product, onClose, onSuccess }: ProductModalProps) {
+export default function ProductModal({ product, initialData, onClose, onSuccess }: ProductModalProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [categories, setCategories] = useState<Category[]>([]);
   const [models, setModels] = useState<CompatibleModel[]>([]);
@@ -56,8 +57,22 @@ export default function ProductModal({ product, onClose, onSuccess }: ProductMod
         compatible_models: product.compatible_models.map((m) => m.id),
       });
       setExistingImages(product.images.map((img) => ({ id: img.id, url: img.url })));
+    } else if (initialData) {
+      setFormData({
+        name: initialData.name || '',
+        slug: initialData.slug || '',
+        price: initialData.price?.toString() || '',
+        cost: initialData.cost?.toString() || '',
+        description: initialData.description || '',
+        condition: initialData.condition || 'usado',
+        in_stock: initialData.in_stock ?? true,
+        is_original: initialData.is_original ?? true,
+        source: initialData.source || '',
+        category_id: initialData.category_id || '',
+        compatible_models: initialData.compatible_models?.map((m) => m.id) || [],
+      });
     }
-  }, [product]);
+  }, [product, initialData]);
 
   const loadData = async () => {
     try {

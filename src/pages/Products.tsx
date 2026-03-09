@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Plus, Pencil, Trash2, Search, X } from 'lucide-react';
+import { Plus, Pencil, Trash2, Search, X, Filter, Copy } from 'lucide-react';
 import { productService } from '../services/productService';
 import type { Product } from '../types/product';
 import ProductModal from '../components/ProductModal';
@@ -9,8 +9,10 @@ export default function ProductsPage() {
   const [filteredProducts, setFilteredProducts] = useState<Product[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
+  const [stockFilter, setStockFilter] = useState<'all' | 'in_stock' | 'sold_out'>('all');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+  const [duplicateData, setDuplicateData] = useState<Partial<Product> | undefined>(undefined);
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
 
   useEffect(() => {
@@ -18,12 +20,18 @@ export default function ProductsPage() {
   }, []);
 
   useEffect(() => {
-    const filtered = products.filter((product) =>
-      product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      product.category_name.toLowerCase().includes(searchTerm.toLowerCase())
-    );
+    const filtered = products.filter((product) => {
+      const matchesSearch =
+        product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        product.category_name.toLowerCase().includes(searchTerm.toLowerCase());
+      const matchesStock =
+        stockFilter === 'all' ||
+        (stockFilter === 'in_stock' && product.in_stock) ||
+        (stockFilter === 'sold_out' && !product.in_stock);
+      return matchesSearch && matchesStock;
+    });
     setFilteredProducts(filtered);
-  }, [searchTerm, products]);
+  }, [searchTerm, stockFilter, products]);
 
   const loadProducts = async () => {
     try {
@@ -44,6 +52,17 @@ export default function ProductsPage() {
 
   const handleEdit = (product: Product) => {
     setSelectedProduct(product);
+    setDuplicateData(undefined);
+    setIsModalOpen(true);
+  };
+
+  const handleDuplicate = (product: Product) => {
+    setSelectedProduct(null);
+    setDuplicateData({
+      ...product,
+      name: `${product.name} (DUPL)`,
+      slug: `${product.slug}-dupl`,
+    });
     setIsModalOpen(true);
   };
 
@@ -60,6 +79,7 @@ export default function ProductsPage() {
   const handleModalClose = () => {
     setIsModalOpen(false);
     setSelectedProduct(null);
+    setDuplicateData(undefined);
   };
 
   const handleModalSuccess = () => {
@@ -89,16 +109,50 @@ export default function ProductsPage() {
         </button>
       </div>
 
-      {/* Search */}
-      <div className="relative mb-6">
-        <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
-        <input
-          type="text"
-          placeholder="Buscar productos..."
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          className="w-full pl-12 pr-4 py-3 bg-kawa-gray border border-gray-800 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-kawa-green transition-colors"
-        />
+      {/* Search & Filters */}
+      <div className="flex flex-col sm:flex-row gap-3 mb-6">
+        <div className="relative flex-1">
+          <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
+          <input
+            type="text"
+            placeholder="Buscar productos..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="w-full pl-12 pr-4 py-3 bg-kawa-gray border border-gray-800 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-kawa-green transition-colors"
+          />
+        </div>
+        <div className="flex items-center gap-1 bg-kawa-gray border border-gray-800 rounded-lg p-1">
+          <button
+            onClick={() => setStockFilter('all')}
+            className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+              stockFilter === 'all'
+                ? 'bg-kawa-green text-black'
+                : 'text-gray-400 hover:text-white'
+            }`}
+          >
+            Todos
+          </button>
+          <button
+            onClick={() => setStockFilter('in_stock')}
+            className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+              stockFilter === 'in_stock'
+                ? 'bg-green-500 text-white'
+                : 'text-gray-400 hover:text-white'
+            }`}
+          >
+            En Stock
+          </button>
+          <button
+            onClick={() => setStockFilter('sold_out')}
+            className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+              stockFilter === 'sold_out'
+                ? 'bg-red-500 text-white'
+                : 'text-gray-400 hover:text-white'
+            }`}
+          >
+            Agotado
+          </button>
+        </div>
       </div>
 
       {/* Products Grid */}
@@ -120,12 +174,21 @@ export default function ProductsPage() {
                 <button
                   onClick={() => handleEdit(product)}
                   className="p-2 bg-kawa-green rounded-lg text-black hover:bg-kawa-green-light transition-colors"
+                  title="Editar"
                 >
                   <Pencil size={20} />
                 </button>
                 <button
+                  onClick={() => handleDuplicate(product)}
+                  className="p-2 bg-blue-500 rounded-lg text-white hover:bg-blue-600 transition-colors"
+                  title="Duplicar"
+                >
+                  <Copy size={20} />
+                </button>
+                <button
                   onClick={() => setDeleteConfirm(product.id)}
                   className="p-2 bg-red-500 rounded-lg text-white hover:bg-red-600 transition-colors"
+                  title="Eliminar"
                 >
                   <Trash2 size={20} />
                 </button>
@@ -193,6 +256,7 @@ export default function ProductsPage() {
       {isModalOpen && (
         <ProductModal
           product={selectedProduct}
+          initialData={duplicateData}
           onClose={handleModalClose}
           onSuccess={handleModalSuccess}
         />

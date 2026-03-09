@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Plus, Pencil, Trash2, Search, X, Filter, Copy } from 'lucide-react';
+import { Plus, Pencil, Trash2, Search, X, Copy } from 'lucide-react';
 import { productService } from '../services/productService';
 import type { Product } from '../types/product';
 import ProductModal from '../components/ProductModal';

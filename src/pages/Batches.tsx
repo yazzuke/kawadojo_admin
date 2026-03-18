@@ -1,13 +1,15 @@
 import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { Plus, Package, DollarSign, Eye, Trash2, Edit2, Filter, ShoppingCart, Archive } from 'lucide-react';
 import { batchesService } from '../services/batchesService';
 import type { Batch, BatchSummary } from '../types/batch';
 import { BATCH_STATUSES } from '../types/batch';
 import BatchModal from '../components/BatchModal';
 
-export default function BatchesPage() {
-  const navigate = useNavigate();
+interface BatchesPageProps {
+  onOpenBatch?: (batchId: string, batchNumber: string) => void;
+}
+
+export default function BatchesPage({ onOpenBatch }: BatchesPageProps = {}) {
   const [batches, setBatches] = useState<Batch[]>([]);
   const [filteredBatches, setFilteredBatches] = useState<Batch[]>([]);
   const [summary, setSummary] = useState<BatchSummary | null>(null);
@@ -47,7 +49,9 @@ export default function BatchesPage() {
   };
 
   const handleViewDetails = (batch: Batch) => {
-    navigate(`/batches/${batch.id}`);
+    if (onOpenBatch) {
+      onOpenBatch(batch.id, batch.batch_number);
+    }
   };
 
   const handleCreate = () => {

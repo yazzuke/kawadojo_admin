@@ -112,7 +112,7 @@ export default function AdminLayout() {
         </header>
 
         {/* Page content */}
-        <main className="p-6">
+        <main className="p-6 flex-1">
           <Outlet />
         </main>
       </div>

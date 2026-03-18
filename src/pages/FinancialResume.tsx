@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState } from "react";
 import {
   DollarSign,
   TrendingUp,
@@ -19,16 +19,25 @@ import {
   Eye,
   X,
   Plus,
-} from 'lucide-react';
-import { financialService } from '../services/financialresumeService';
-import type { FinancialSummaryData, MonthlySummaryData, MonthData, OrderListItem } from '../types/financialresume';
+} from "lucide-react";
+import { financialService } from "../services/financialresumeService";
+import ProfitWithdrawalsTab from "../components/ProfitWithdrawalsTab";
+import type {
+  FinancialSummaryData,
+  MonthlySummaryData,
+  MonthData,
+  OrderListItem,
+} from "../types/financialresume";
 
 export default function FinancialResumePage() {
   const [summary, setSummary] = useState<FinancialSummaryData | null>(null);
   const [monthly, setMonthly] = useState<MonthlySummaryData | null>(null);
+  const [totalWithdrawn, setTotalWithdrawn] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [year, setYear] = useState(new Date().getFullYear());
-  const [activeTab, setActiveTab] = useState<'overview' | 'monthly'>('overview');
+  const [activeTab, setActiveTab] = useState<"overview" | "monthly">(
+    "overview",
+  );
   const [showExpenseModal, setShowExpenseModal] = useState(false);
   const [showInterestModal, setShowInterestModal] = useState(false);
   const [showLossModal, setShowLossModal] = useState(false);
@@ -47,23 +56,23 @@ export default function FinancialResumePage() {
       setSummary(summaryData);
       setMonthly(monthlyData);
     } catch (error) {
-      console.error('Error loading financial data:', error);
+      console.error("Error loading financial data:", error);
     } finally {
       setIsLoading(false);
     }
   };
 
   const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('es-CO', {
-      style: 'currency',
-      currency: 'COP',
+    return new Intl.NumberFormat("es-CO", {
+      style: "currency",
+      currency: "COP",
       minimumFractionDigits: 0,
     }).format(amount);
   };
 
   const formatPercent = (value: string) => {
     // If it already has %, return as-is
-    if (value.includes('%')) return value;
+    if (value.includes("%")) return value;
     return `${value}%`;
   };
 
@@ -79,13 +88,18 @@ export default function FinancialResumePage() {
     return (
       <div className="text-center py-12">
         <BarChart3 size={48} className="mx-auto text-gray-600 mb-4" />
-        <p className="text-gray-400 text-lg">No se pudo cargar el resumen financiero</p>
+        <p className="text-gray-400 text-lg">
+          No se pudo cargar el resumen financiero
+        </p>
       </div>
     );
   }
 
   // Find max revenue month for bar chart scaling
-  const maxMonthlyRevenue = Math.max(...monthly.months.map(m => m.revenue), 1);
+  const maxMonthlyRevenue = Math.max(
+    ...monthly.months.map((m) => m.revenue),
+    1,
+  );
 
   return (
     <div className="space-y-6">
@@ -93,18 +107,22 @@ export default function FinancialResumePage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold text-white">Resumen Financiero</h1>
-          <p className="text-gray-400 mt-1">Análisis completo de ingresos, egresos y rentabilidad</p>
+          <p className="text-gray-400 mt-1">
+            Análisis completo de ingresos, egresos y rentabilidad
+          </p>
         </div>
         <div className="flex items-center gap-3">
           <button
-            onClick={() => setYear(y => y - 1)}
+            onClick={() => setYear((y) => y - 1)}
             className="p-2 bg-kawa-gray border border-gray-700 rounded-lg text-gray-400 hover:text-white transition-colors"
           >
             <ChevronLeft size={20} />
           </button>
-          <span className="text-xl font-bold text-white min-w-15 text-center">{year}</span>
+          <span className="text-xl font-bold text-white min-w-15 text-center">
+            {year}
+          </span>
           <button
-            onClick={() => setYear(y => y + 1)}
+            onClick={() => setYear((y) => y + 1)}
             className="p-2 bg-kawa-gray border border-gray-700 rounded-lg text-gray-400 hover:text-white transition-colors"
             disabled={year >= new Date().getFullYear()}
           >
@@ -116,28 +134,28 @@ export default function FinancialResumePage() {
       {/* Tabs */}
       <div className="flex gap-2 border-b border-gray-800 pb-1">
         <button
-          onClick={() => setActiveTab('overview')}
+          onClick={() => setActiveTab("overview")}
           className={`px-5 py-2.5 rounded-t-lg font-medium transition-colors ${
-            activeTab === 'overview'
-              ? 'bg-kawa-gray text-kawa-green border-b-2 border-kawa-green'
-              : 'text-gray-400 hover:text-white'
+            activeTab === "overview"
+              ? "bg-kawa-gray text-kawa-green border-b-2 border-kawa-green"
+              : "text-gray-400 hover:text-white"
           }`}
         >
           Resumen General
         </button>
         <button
-          onClick={() => setActiveTab('monthly')}
+          onClick={() => setActiveTab("monthly")}
           className={`px-5 py-2.5 rounded-t-lg font-medium transition-colors ${
-            activeTab === 'monthly'
-              ? 'bg-kawa-gray text-kawa-green border-b-2 border-kawa-green'
-              : 'text-gray-400 hover:text-white'
+            activeTab === "monthly"
+              ? "bg-kawa-gray text-kawa-green border-b-2 border-kawa-green"
+              : "text-gray-400 hover:text-white"
           }`}
         >
           Mes a Mes
         </button>
       </div>
 
-      {activeTab === 'overview' ? (
+      {activeTab === "overview" ? (
         <OverviewTab
           summary={summary}
           monthly={monthly}
@@ -147,12 +165,11 @@ export default function FinancialResumePage() {
           onAddExpense={() => setShowExpenseModal(true)}
           onAddInterest={() => setShowInterestModal(true)}
           onAddLoss={() => setShowLossModal(true)}
+          totalWithdrawn={totalWithdrawn}
+          setTotalWithdrawn={setTotalWithdrawn}
         />
       ) : (
-        <MonthlyTab
-          monthly={monthly}
-          formatCurrency={formatCurrency}
-        />
+        <MonthlyTab monthly={monthly} formatCurrency={formatCurrency} />
       )}
 
       {/* Create Modals */}
@@ -178,7 +195,6 @@ export default function FinancialResumePage() {
   );
 }
 
-// ============ Overview Tab ============
 function OverviewTab({
   summary,
   monthly,
@@ -188,6 +204,8 @@ function OverviewTab({
   onAddExpense,
   onAddInterest,
   onAddLoss,
+  totalWithdrawn,
+  setTotalWithdrawn,
 }: {
   summary: FinancialSummaryData;
   monthly: MonthlySummaryData;
@@ -197,6 +215,8 @@ function OverviewTab({
   onAddExpense: () => void;
   onAddInterest: () => void;
   onAddLoss: () => void;
+  totalWithdrawn: number;
+  setTotalWithdrawn: (n: number) => void;
 }) {
   return (
     <div className="space-y-6">
@@ -222,9 +242,19 @@ function OverviewTab({
         />
         <SummaryCard
           icon={<TrendingUp size={24} />}
-          iconColor={summary.summary.net_profit >= 0 ? 'text-green-400' : 'text-red-400'}
-          bgColor={summary.summary.net_profit >= 0 ? 'bg-green-900/30' : 'bg-red-900/30'}
-          borderColor={summary.summary.net_profit >= 0 ? 'border-green-800' : 'border-red-800'}
+          iconColor={
+            summary.summary.net_profit >= 0 ? "text-green-400" : "text-red-400"
+          }
+          bgColor={
+            summary.summary.net_profit >= 0
+              ? "bg-green-900/30"
+              : "bg-red-900/30"
+          }
+          borderColor={
+            summary.summary.net_profit >= 0
+              ? "border-green-800"
+              : "border-red-800"
+          }
           label="Ganancia Neta"
           value={formatCurrency(summary.summary.net_profit)}
           sub={`Margen: ${formatPercent(summary.summary.net_margin)}`}
@@ -242,12 +272,18 @@ function OverviewTab({
 
       {/* Revenue Chart (mini bar chart) */}
       <div className="bg-kawa-gray p-6 rounded-lg border border-gray-800">
-        <h3 className="text-lg font-semibold text-white mb-4">Ingresos Mensuales</h3>
+        <h3 className="text-lg font-semibold text-white mb-4">
+          Ingresos Mensuales
+        </h3>
         <div className="flex items-end gap-2 h-40">
           {monthly.months.map((m) => {
-            const height = maxMonthlyRevenue > 0 ? (m.revenue / maxMonthlyRevenue) * 100 : 0;
+            const height =
+              maxMonthlyRevenue > 0 ? (m.revenue / maxMonthlyRevenue) * 100 : 0;
             return (
-              <div key={m.month} className="flex-1 flex flex-col items-center gap-1 group relative">
+              <div
+                key={m.month}
+                className="flex-1 flex flex-col items-center gap-1 group relative"
+              >
                 <div className="absolute bottom-full mb-2 hidden group-hover:block bg-kawa-black border border-gray-700 rounded px-3 py-2 text-xs whitespace-nowrap z-10">
                   <p className="text-white font-medium">{m.month_name}</p>
                   <p className="text-green-400">{formatCurrency(m.revenue)}</p>
@@ -255,11 +291,18 @@ function OverviewTab({
                 </div>
                 <div
                   className={`w-full rounded-t transition-all ${
-                    m.revenue > 0 ? 'bg-kawa-green hover:bg-green-400' : 'bg-gray-700'
+                    m.revenue > 0
+                      ? "bg-kawa-green hover:bg-green-400"
+                      : "bg-gray-700"
                   }`}
-                  style={{ height: `${Math.max(height, 2)}%`, minHeight: '4px' }}
+                  style={{
+                    height: `${Math.max(height, 2)}%`,
+                    minHeight: "4px",
+                  }}
                 />
-                <span className="text-[10px] text-gray-500">{m.month_name.substring(0, 3)}</span>
+                <span className="text-[10px] text-gray-500">
+                  {m.month_name.substring(0, 3)}
+                </span>
               </div>
             );
           })}
@@ -276,23 +319,33 @@ function OverviewTab({
           <div className="space-y-3">
             <div className="flex justify-between">
               <span className="text-gray-400">Ingresos Totales:</span>
-              <span className="text-green-400 font-bold">{formatCurrency(summary.income.total_revenue)}</span>
+              <span className="text-green-400 font-bold">
+                {formatCurrency(summary.income.total_revenue)}
+              </span>
             </div>
             <div className="flex justify-between">
               <span className="text-gray-400">Ganancia Bruta:</span>
-              <span className="text-green-400 font-medium">{formatCurrency(summary.income.gross_profit)}</span>
+              <span className="text-green-400 font-medium">
+                {formatCurrency(summary.income.gross_profit)}
+              </span>
             </div>
             <div className="flex justify-between">
               <span className="text-gray-400">Total Órdenes:</span>
-              <span className="text-white font-medium">{summary.income.total_orders}</span>
+              <span className="text-white font-medium">
+                {summary.income.total_orders}
+              </span>
             </div>
             <div className="flex justify-between">
               <span className="text-gray-400">Ticket Promedio:</span>
-              <span className="text-white font-medium">{formatCurrency(summary.income.avg_order_value)}</span>
+              <span className="text-white font-medium">
+                {formatCurrency(summary.income.avg_order_value)}
+              </span>
             </div>
 
             <div className="pt-3 border-t border-gray-700">
-              <p className="text-xs text-gray-500 mb-2 uppercase tracking-wider">Por Método de Pago</p>
+              <p className="text-xs text-gray-500 mb-2 uppercase tracking-wider">
+                Por Método de Pago
+              </p>
               <div className="space-y-2">
                 <PaymentMethodRow
                   icon={<CreditCard size={16} />}
@@ -302,7 +355,10 @@ function OverviewTab({
                   formatCurrency={formatCurrency}
                   extra={
                     <span className="text-red-400 text-xs">
-                      Fee: {formatCurrency(summary.income.by_payment_method.mercadopago.fees || 0)}
+                      Fee:{" "}
+                      {formatCurrency(
+                        summary.income.by_payment_method.mercadopago.fees || 0,
+                      )}
                     </span>
                   }
                 />
@@ -325,14 +381,23 @@ function OverviewTab({
 
             {Object.keys(summary.income.by_status).length > 0 && (
               <div className="pt-3 border-t border-gray-700">
-                <p className="text-xs text-gray-500 mb-2 uppercase tracking-wider">Por Estado</p>
+                <p className="text-xs text-gray-500 mb-2 uppercase tracking-wider">
+                  Por Estado
+                </p>
                 <div className="space-y-1">
-                  {Object.entries(summary.income.by_status).map(([status, count]) => (
-                    <div key={status} className="flex justify-between text-sm">
-                      <span className="text-gray-400 capitalize">{status}</span>
-                      <span className="text-white">{count}</span>
-                    </div>
-                  ))}
+                  {Object.entries(summary.income.by_status).map(
+                    ([status, count]) => (
+                      <div
+                        key={status}
+                        className="flex justify-between text-sm"
+                      >
+                        <span className="text-gray-400 capitalize">
+                          {status}
+                        </span>
+                        <span className="text-white">{count}</span>
+                      </div>
+                    ),
+                  )}
                 </div>
               </div>
             )}
@@ -348,7 +413,9 @@ function OverviewTab({
           <div className="space-y-3">
             <div className="flex justify-between">
               <span className="text-gray-400">Total Egresos:</span>
-              <span className="text-red-400 font-bold">{formatCurrency(summary.outflows.total)}</span>
+              <span className="text-red-400 font-bold">
+                {formatCurrency(summary.outflows.total)}
+              </span>
             </div>
 
             <div className="pt-3 border-t border-gray-700 space-y-3">
@@ -359,7 +426,7 @@ function OverviewTab({
                 count={summary.outflows.expenses.count}
                 color="text-red-400"
                 formatCurrency={formatCurrency}
-                items={summary.outflows.expenses.items.map(e => ({
+                items={summary.outflows.expenses.items.map((e) => ({
                   name: e.name,
                   amount: e.amount,
                   date: e.expense_date,
@@ -383,12 +450,12 @@ function OverviewTab({
                 count={summary.outflows.interests.count}
                 color="text-yellow-400"
                 formatCurrency={formatCurrency}
-                items={summary.outflows.interests.items.map(i => ({
+                items={summary.outflows.interests.items.map((i) => ({
                   name: i.name,
                   amount: i.amount,
                   date: i.payment_date,
                   detail: i.creditor ? `Acreedor: ${i.creditor}` : undefined,
-                  badge: i.source.replace(/_/g, ' '),
+                  badge: i.source.replace(/_/g, " "),
                 }))}
                 breakdown={summary.outflows.interests.by_source}
                 breakdownLabel="Por fuente"
@@ -402,12 +469,14 @@ function OverviewTab({
                 count={summary.outflows.losses.count}
                 color="text-orange-400"
                 formatCurrency={formatCurrency}
-                items={summary.outflows.losses.items.map(l => ({
+                items={summary.outflows.losses.items.map((l) => ({
                   name: l.name,
                   amount: l.amount,
                   date: l.loss_date,
-                  detail: l.order ? `Orden: ${l.order.order_number}` : (l.notes || undefined),
-                  badge: l.reason.replace(/_/g, ' '),
+                  detail: l.order
+                    ? `Orden: ${l.order.order_number}`
+                    : l.notes || undefined,
+                  badge: l.reason.replace(/_/g, " "),
                 }))}
                 breakdown={summary.outflows.losses.by_reason}
                 breakdownLabel="Por razón"
@@ -428,49 +497,90 @@ function OverviewTab({
           <div className="space-y-3">
             <div className="flex justify-between">
               <span className="text-gray-400">Total Invertido:</span>
-              <span className="text-white font-bold">{formatCurrency(summary.investment.total)}</span>
+              <span className="text-white font-bold">
+                {formatCurrency(summary.investment.total)}
+              </span>
             </div>
             <div className="pt-2 border-t border-gray-700 space-y-2">
               <div className="flex justify-between text-sm">
                 <span className="text-gray-400">Compras:</span>
-                <span className="text-gray-300">{formatCurrency(summary.investment.purchase_cost)}</span>
+                <span className="text-gray-300">
+                  {formatCurrency(summary.investment.purchase_cost)}
+                </span>
               </div>
               <div className="flex justify-between text-sm">
                 <span className="text-gray-400">Envíos:</span>
-                <span className="text-gray-300">{formatCurrency(summary.investment.shipping_cost)}</span>
+                <span className="text-gray-300">
+                  {formatCurrency(summary.investment.shipping_cost)}
+                </span>
               </div>
               {summary.investment.customs_fees > 0 && (
                 <div className="flex justify-between text-sm">
                   <span className="text-gray-400">Aduana:</span>
-                  <span className="text-gray-300">{formatCurrency(summary.investment.customs_fees)}</span>
+                  <span className="text-gray-300">
+                    {formatCurrency(summary.investment.customs_fees)}
+                  </span>
                 </div>
               )}
               {summary.investment.additional_fees > 0 && (
                 <div className="flex justify-between text-sm">
                   <span className="text-gray-400">Adicionales:</span>
-                  <span className="text-gray-300">{formatCurrency(summary.investment.additional_fees)}</span>
+                  <span className="text-gray-300">
+                    {formatCurrency(summary.investment.additional_fees)}
+                  </span>
                 </div>
               )}
             </div>
             <div className="pt-2 border-t border-gray-700 space-y-2">
               <div className="flex justify-between text-sm">
                 <span className="text-gray-400">Lotes:</span>
-                <span className="text-white">{summary.investment.batches_count}</span>
+                <span className="text-white">
+                  {summary.investment.batches_count}
+                </span>
               </div>
               <div className="flex justify-between text-sm">
                 <span className="text-gray-400">Unidades compradas:</span>
-                <span className="text-white">{summary.investment.units_purchased}</span>
+                <span className="text-white">
+                  {summary.investment.units_purchased}
+                </span>
               </div>
               <div className="flex justify-between text-sm">
                 <span className="text-gray-400">Potencial de Venta:</span>
-                <span className="text-yellow-400">{formatCurrency(summary.investment.potential_revenue)}</span>
+                <span className="text-yellow-400">
+                  {formatCurrency(summary.investment.potential_revenue)}
+                </span>
               </div>
               <div className="flex justify-between text-sm">
                 <span className="text-gray-400">Ganancia Potencial:</span>
-                <span className={`font-medium ${summary.investment.potential_profit >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                <span
+                  className={`font-medium ${summary.investment.potential_profit >= 0 ? "text-green-400" : "text-red-400"}`}
+                >
                   {formatCurrency(summary.investment.potential_profit)}
                 </span>
               </div>
+              <div className="flex justify-between text-sm">
+                <span className="text-gray-400">Ganancia Real - Egresos:</span>
+                <span
+                  className={`font-medium ${summary.investment.total_potential_profit_net >= 0 ? "text-green-400" : "text-red-400"}`}
+                >
+                  {formatCurrency(
+                    summary.investment.total_potential_profit_net,
+                  )}
+                </span>
+                
+              </div>
+              <div className="flex justify-between text-sm">
+                <span className="text-gray-400">ROI Neto:</span>
+                <span className={`font-medium text-green-400`}>
+                  {formatPercent(summary.investment.net_roi)}
+                </span>
+              </div>
+                 <div className="flex justify-between">
+                    <span className="text-gray-400">Ganancia Real - Egresos - Retiros:</span>
+                    <span className={`font-bold ${(summary.investment.total_potential_profit_net - totalWithdrawn) >= 0 ? "text-green-400" : "text-red-400"}`}>
+                      {formatCurrency(summary.investment.total_potential_profit_net - totalWithdrawn)}
+                    </span>
+                  </div><div className=""></div>
             </div>
           </div>
         </div>
@@ -484,45 +594,65 @@ function OverviewTab({
           <div className="space-y-3">
             <div className="flex justify-between">
               <span className="text-gray-400">Ganancia Bruta:</span>
-              <span className="text-green-400 font-medium">{formatCurrency(summary.profitability.gross_profit)}</span>
+              <span className="text-green-400 font-medium">
+                {formatCurrency(summary.profitability.gross_profit)}
+              </span>
             </div>
 
             <div className="pt-2 border-t border-gray-700 space-y-2">
-              <p className="text-xs text-gray-500 uppercase tracking-wider">Deducciones</p>
+              <p className="text-xs text-gray-500 uppercase tracking-wider">
+                Deducciones
+              </p>
               <div className="flex justify-between text-sm">
                 <span className="text-gray-400">Comisiones MP:</span>
-                <span className="text-red-400">-{formatCurrency(summary.profitability.mp_fees)}</span>
+                <span className="text-red-400">
+                  -{formatCurrency(summary.profitability.mp_fees)}
+                </span>
               </div>
               <div className="flex justify-between text-sm">
                 <span className="text-gray-400">Gastos Operativos:</span>
-                <span className="text-red-400">-{formatCurrency(summary.profitability.expenses)}</span>
+                <span className="text-red-400">
+                  -{formatCurrency(summary.profitability.expenses)}
+                </span>
               </div>
               <div className="flex justify-between text-sm">
                 <span className="text-gray-400">Intereses:</span>
-                <span className="text-red-400">-{formatCurrency(summary.profitability.interests)}</span>
+                <span className="text-red-400">
+                  -{formatCurrency(summary.profitability.interests)}
+                </span>
               </div>
               <div className="flex justify-between text-sm">
                 <span className="text-gray-400">Pérdidas:</span>
-                <span className="text-red-400">-{formatCurrency(summary.profitability.losses)}</span>
+                <span className="text-red-400">
+                  -{formatCurrency(summary.profitability.losses)}
+                </span>
               </div>
             </div>
 
             <div className="pt-3 border-t border-gray-700 space-y-2">
               <div className="flex justify-between">
                 <span className="text-white font-semibold">Ganancia Neta:</span>
-                <span className={`text-xl font-bold ${summary.profitability.net_profit >= 0 ? 'text-kawa-green' : 'text-red-400'}`}>
+                <span
+                  className={`text-xl font-bold ${summary.profitability.net_profit >= 0 ? "text-kawa-green" : "text-red-400"}`}
+                >
                   {formatCurrency(summary.profitability.net_profit)}
                 </span>
               </div>
               <div className="flex justify-between">
                 <span className="text-gray-400">Margen Neto:</span>
-                <span className={`font-bold ${parseFloat(summary.profitability.net_margin) >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                <span
+                  className={`font-bold ${parseFloat(summary.profitability.net_margin) >= 0 ? "text-green-400" : "text-red-400"}`}
+                >
                   {formatPercent(summary.profitability.net_margin)}
                 </span>
               </div>
+              
+               
               <div className="flex justify-between">
                 <span className="text-gray-400">ROI:</span>
-                <span className={`font-bold ${parseFloat(summary.profitability.roi) >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                <span
+                  className={`font-bold ${parseFloat(summary.profitability.roi) >= 0 ? "text-green-400" : "text-red-400"}`}
+                >
                   {formatPercent(summary.profitability.roi)}
                 </span>
               </div>
@@ -531,11 +661,14 @@ function OverviewTab({
         </div>
       </div>
 
+<ProfitWithdrawalsTab
+  formatCurrency={formatCurrency}
+  netProfit={summary.profitability.net_profit}
+  onTotalWithdrawnChange={setTotalWithdrawn}
+/>
+
       {/* Orders List */}
-      <OrdersTab
-        orders={summary.orders_list}
-        formatCurrency={formatCurrency}
-      />
+      <OrdersTab orders={summary.orders_list} formatCurrency={formatCurrency} />
     </div>
   );
 }
@@ -550,7 +683,7 @@ function MonthlyTab({
 }) {
   // Only show months with data
   const activeMonths = monthly.months.filter(
-    m => m.revenue > 0 || m.outflows.total > 0 || m.investment.total > 0
+    (m) => m.revenue > 0 || m.outflows.total > 0 || m.investment.total > 0,
   );
 
   return (
@@ -559,26 +692,40 @@ function MonthlyTab({
       <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
         <div className="bg-green-900/30 p-4 rounded-lg border border-green-800">
           <p className="text-xs text-gray-400">Ingresos Anuales</p>
-          <p className="text-lg font-bold text-green-400">{formatCurrency(monthly.annual.total_revenue)}</p>
-          <p className="text-xs text-gray-500">{monthly.annual.total_orders} órdenes</p>
+          <p className="text-lg font-bold text-green-400">
+            {formatCurrency(monthly.annual.total_revenue)}
+          </p>
+          <p className="text-xs text-gray-500">
+            {monthly.annual.total_orders} órdenes
+          </p>
         </div>
         <div className="bg-red-900/30 p-4 rounded-lg border border-red-800">
           <p className="text-xs text-gray-400">Egresos Anuales</p>
-          <p className="text-lg font-bold text-red-400">{formatCurrency(monthly.annual.total_outflows)}</p>
+          <p className="text-lg font-bold text-red-400">
+            {formatCurrency(monthly.annual.total_outflows)}
+          </p>
         </div>
-        <div className={`p-4 rounded-lg border ${monthly.annual.total_net_profit >= 0 ? 'bg-green-900/30 border-green-800' : 'bg-red-900/30 border-red-800'}`}>
+        <div
+          className={`p-4 rounded-lg border ${monthly.annual.total_net_profit >= 0 ? "bg-green-900/30 border-green-800" : "bg-red-900/30 border-red-800"}`}
+        >
           <p className="text-xs text-gray-400">Ganancia Neta</p>
-          <p className={`text-lg font-bold ${monthly.annual.total_net_profit >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+          <p
+            className={`text-lg font-bold ${monthly.annual.total_net_profit >= 0 ? "text-green-400" : "text-red-400"}`}
+          >
             {formatCurrency(monthly.annual.total_net_profit)}
           </p>
         </div>
         <div className="bg-blue-900/30 p-4 rounded-lg border border-blue-800">
           <p className="text-xs text-gray-400">Inversión Anual</p>
-          <p className="text-lg font-bold text-blue-400">{formatCurrency(monthly.annual.total_investment)}</p>
+          <p className="text-lg font-bold text-blue-400">
+            {formatCurrency(monthly.annual.total_investment)}
+          </p>
         </div>
         <div className="bg-yellow-900/30 p-4 rounded-lg border border-yellow-800">
           <p className="text-xs text-gray-400">Ganancia Bruta</p>
-          <p className="text-lg font-bold text-yellow-400">{formatCurrency(monthly.annual.total_gross_profit)}</p>
+          <p className="text-lg font-bold text-yellow-400">
+            {formatCurrency(monthly.annual.total_gross_profit)}
+          </p>
         </div>
       </div>
 
@@ -591,7 +738,11 @@ function MonthlyTab({
           </div>
         ) : (
           activeMonths.map((month) => (
-            <MonthCard key={month.month} month={month} formatCurrency={formatCurrency} />
+            <MonthCard
+              key={month.month}
+              month={month}
+              formatCurrency={formatCurrency}
+            />
           ))
         )}
       </div>
@@ -655,7 +806,9 @@ function PaymentMethodRow({
         </div>
       </div>
       <div className="text-right">
-        <p className="text-sm text-green-400 font-medium">{formatCurrency(revenue)}</p>
+        <p className="text-sm text-green-400 font-medium">
+          {formatCurrency(revenue)}
+        </p>
         {extra}
       </div>
     </div>
@@ -704,7 +857,13 @@ function OutflowSection({
   count: number;
   color: string;
   formatCurrency: (n: number) => string;
-  items: Array<{ name: string; amount: number; date: string; detail?: string; badge?: string }>;
+  items: Array<{
+    name: string;
+    amount: number;
+    date: string;
+    detail?: string;
+    badge?: string;
+  }>;
   breakdown?: Record<string, { total: number; count: number }>;
   breakdownLabel?: string;
   onAdd?: () => void;
@@ -721,11 +880,16 @@ function OutflowSection({
           <div className="flex items-center gap-1">
             <span className="text-gray-400 text-sm">{label}</span>
             <span className="text-gray-600 text-xs">({count})</span>
-            {items.length > 0 && (
-              expanded ? <ChevronUp size={14} className="text-gray-500" /> : <ChevronDown size={14} className="text-gray-500" />
-            )}
+            {items.length > 0 &&
+              (expanded ? (
+                <ChevronUp size={14} className="text-gray-500" />
+              ) : (
+                <ChevronDown size={14} className="text-gray-500" />
+              ))}
           </div>
-          <span className={`font-medium ${color}`}>{formatCurrency(total)}</span>
+          <span className={`font-medium ${color}`}>
+            {formatCurrency(total)}
+          </span>
         </button>
         {onAdd && (
           <button
@@ -740,11 +904,19 @@ function OutflowSection({
 
       {breakdown && Object.keys(breakdown).length > 0 && (
         <div className="pl-4 mt-1 space-y-0.5">
-          {breakdownLabel && <p className="text-[10px] text-gray-600 uppercase tracking-wider">{breakdownLabel}</p>}
+          {breakdownLabel && (
+            <p className="text-[10px] text-gray-600 uppercase tracking-wider">
+              {breakdownLabel}
+            </p>
+          )}
           {Object.entries(breakdown).map(([key, data]) => (
             <div key={key} className="flex justify-between text-xs">
-              <span className="text-gray-500 capitalize">{key.replace(/_/g, ' ')}</span>
-              <span className="text-gray-400">{formatCurrency(data.total)} ({data.count})</span>
+              <span className="text-gray-500 capitalize">
+                {key.replace(/_/g, " ")}
+              </span>
+              <span className="text-gray-400">
+                {formatCurrency(data.total)} ({data.count})
+              </span>
             </div>
           ))}
         </div>
@@ -753,12 +925,15 @@ function OutflowSection({
       {expanded && items.length > 0 && (
         <div className="pl-4 mt-2 space-y-1.5">
           {items.map((item, idx) => (
-            <div key={idx} className="bg-kawa-black/40 rounded-lg px-3 py-2 flex justify-between items-start">
+            <div
+              key={idx}
+              className="bg-kawa-black/40 rounded-lg px-3 py-2 flex justify-between items-start"
+            >
               <div>
                 <p className="text-sm text-white">{item.name}</p>
                 <div className="flex items-center gap-2 mt-0.5">
                   <span className="text-[10px] text-gray-500">
-                    {new Date(item.date).toLocaleDateString('es-CO')}
+                    {new Date(item.date).toLocaleDateString("es-CO")}
                   </span>
                   {item.badge && (
                     <span className="text-[10px] bg-gray-800 text-gray-400 px-1.5 py-0.5 rounded capitalize">
@@ -767,10 +942,14 @@ function OutflowSection({
                   )}
                 </div>
                 {item.detail && (
-                  <p className="text-[10px] text-gray-500 mt-0.5">{item.detail}</p>
+                  <p className="text-[10px] text-gray-500 mt-0.5">
+                    {item.detail}
+                  </p>
                 )}
               </div>
-              <span className={`text-sm font-medium ${color}`}>{formatCurrency(item.amount)}</span>
+              <span className={`text-sm font-medium ${color}`}>
+                {formatCurrency(item.amount)}
+              </span>
             </div>
           ))}
         </div>
@@ -792,13 +971,15 @@ function MonthCard({
     <div className="bg-kawa-gray p-5 rounded-lg border border-gray-800">
       <div className="flex items-center justify-between mb-4">
         <h4 className="text-lg font-semibold text-white">{month.month_name}</h4>
-        <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
-          month.net_profit > 0
-            ? 'bg-green-900/50 text-green-400 border border-green-700'
-            : month.net_profit < 0
-            ? 'bg-red-900/50 text-red-400 border border-red-700'
-            : 'bg-gray-800 text-gray-400 border border-gray-700'
-        }`}>
+        <span
+          className={`px-3 py-1 rounded-full text-xs font-semibold ${
+            month.net_profit > 0
+              ? "bg-green-900/50 text-green-400 border border-green-700"
+              : month.net_profit < 0
+                ? "bg-red-900/50 text-red-400 border border-red-700"
+                : "bg-gray-800 text-gray-400 border border-gray-700"
+          }`}
+        >
           {month.net_margin}
         </span>
       </div>
@@ -806,38 +987,58 @@ function MonthCard({
       <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
         <div>
           <p className="text-xs text-gray-500">Ingresos</p>
-          <p className="text-base font-bold text-green-400">{formatCurrency(month.revenue)}</p>
+          <p className="text-base font-bold text-green-400">
+            {formatCurrency(month.revenue)}
+          </p>
           <p className="text-xs text-gray-500">{month.orders_count} órdenes</p>
         </div>
         <div>
           <p className="text-xs text-gray-500">Ganancia Bruta</p>
-          <p className={`text-base font-bold ${month.gross_profit >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+          <p
+            className={`text-base font-bold ${month.gross_profit >= 0 ? "text-green-400" : "text-red-400"}`}
+          >
             {formatCurrency(month.gross_profit)}
           </p>
         </div>
         <div>
           <p className="text-xs text-gray-500">Egresos</p>
-          <p className="text-base font-bold text-red-400">{formatCurrency(month.outflows.total)}</p>
+          <p className="text-base font-bold text-red-400">
+            {formatCurrency(month.outflows.total)}
+          </p>
           {hasOutflows && (
             <div className="text-[10px] text-gray-500 mt-1 space-y-0.5">
-              {month.outflows.expenses > 0 && <p>Gastos: {formatCurrency(month.outflows.expenses)}</p>}
-              {month.outflows.mp_fees > 0 && <p>MP Fee: {formatCurrency(month.outflows.mp_fees)}</p>}
-              {month.outflows.interests > 0 && <p>Intereses: {formatCurrency(month.outflows.interests)}</p>}
-              {month.outflows.losses > 0 && <p>Pérdidas: {formatCurrency(month.outflows.losses)}</p>}
+              {month.outflows.expenses > 0 && (
+                <p>Gastos: {formatCurrency(month.outflows.expenses)}</p>
+              )}
+              {month.outflows.mp_fees > 0 && (
+                <p>MP Fee: {formatCurrency(month.outflows.mp_fees)}</p>
+              )}
+              {month.outflows.interests > 0 && (
+                <p>Intereses: {formatCurrency(month.outflows.interests)}</p>
+              )}
+              {month.outflows.losses > 0 && (
+                <p>Pérdidas: {formatCurrency(month.outflows.losses)}</p>
+              )}
             </div>
           )}
         </div>
         <div>
           <p className="text-xs text-gray-500">Ganancia Neta</p>
-          <p className={`text-base font-bold ${month.net_profit >= 0 ? 'text-kawa-green' : 'text-red-400'}`}>
+          <p
+            className={`text-base font-bold ${month.net_profit >= 0 ? "text-kawa-green" : "text-red-400"}`}
+          >
             {formatCurrency(month.net_profit)}
           </p>
         </div>
         <div>
           <p className="text-xs text-gray-500">Inversión</p>
-          <p className="text-base font-bold text-blue-400">{formatCurrency(month.investment.total)}</p>
+          <p className="text-base font-bold text-blue-400">
+            {formatCurrency(month.investment.total)}
+          </p>
           {month.investment.batches > 0 && (
-            <p className="text-xs text-gray-500">{month.investment.batches} lotes</p>
+            <p className="text-xs text-gray-500">
+              {month.investment.batches} lotes
+            </p>
           )}
         </div>
       </div>
@@ -853,42 +1054,47 @@ function OrdersTab({
   orders: OrderListItem[];
   formatCurrency: (n: number) => string;
 }) {
-  const [selectedOrder, setSelectedOrder] = useState<OrderListItem | null>(null);
-  const [filterStatus, setFilterStatus] = useState<string>('all');
-  const [searchTerm, setSearchTerm] = useState('');
+  const [selectedOrder, setSelectedOrder] = useState<OrderListItem | null>(
+    null,
+  );
+  const [filterStatus, setFilterStatus] = useState<string>("all");
+  const [searchTerm, setSearchTerm] = useState("");
 
   const statusColors: Record<string, string> = {
-    pending: 'bg-yellow-900/50 text-yellow-400 border-yellow-700',
-    confirmed: 'bg-blue-900/50 text-blue-400 border-blue-700',
-    shipped: 'bg-purple-900/50 text-purple-400 border-purple-700',
-    delivered: 'bg-green-900/50 text-green-400 border-green-700',
-    cancelled: 'bg-red-900/50 text-red-400 border-red-700',
-    refunded: 'bg-gray-800 text-gray-400 border-gray-600',
+    pending: "bg-yellow-900/50 text-yellow-400 border-yellow-700",
+    confirmed: "bg-blue-900/50 text-blue-400 border-blue-700",
+    shipped: "bg-purple-900/50 text-purple-400 border-purple-700",
+    delivered: "bg-green-900/50 text-green-400 border-green-700",
+    cancelled: "bg-red-900/50 text-red-400 border-red-700",
+    refunded: "bg-gray-800 text-gray-400 border-gray-600",
   };
 
   const statusLabels: Record<string, string> = {
-    pending: 'Pendiente',
-    confirmed: 'Confirmada',
-    shipped: 'Enviada',
-    delivered: 'Entregada',
-    cancelled: 'Cancelada',
-    refunded: 'Reembolsada',
+    pending: "Pendiente",
+    confirmed: "Confirmada",
+    shipped: "Enviada",
+    delivered: "Entregada",
+    cancelled: "Cancelada",
+    refunded: "Reembolsada",
   };
 
   const paymentLabels: Record<string, string> = {
-    mercadopago: 'MercadoPago',
-    transfer: 'Transferencia',
-    cash: 'Efectivo',
+    mercadopago: "MercadoPago",
+    transfer: "Transferencia",
+    cash: "Efectivo",
   };
 
-  const uniqueStatuses = [...new Set(orders.map(o => o.status))];
+  const uniqueStatuses = [...new Set(orders.map((o) => o.status))];
 
-  const filteredOrders = orders.filter(o => {
-    const matchesStatus = filterStatus === 'all' || o.status === filterStatus;
-    const matchesSearch = searchTerm === '' ||
+  const filteredOrders = orders.filter((o) => {
+    const matchesStatus = filterStatus === "all" || o.status === filterStatus;
+    const matchesSearch =
+      searchTerm === "" ||
       o.order_number.toLowerCase().includes(searchTerm.toLowerCase()) ||
       o.customer.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      o.items.some(i => i.product_name.toLowerCase().includes(searchTerm.toLowerCase()));
+      o.items.some((i) =>
+        i.product_name.toLowerCase().includes(searchTerm.toLowerCase()),
+      );
     return matchesStatus && matchesSearch;
   });
 
@@ -908,26 +1114,27 @@ function OrdersTab({
         />
         <div className="flex gap-2 flex-wrap">
           <button
-            onClick={() => setFilterStatus('all')}
+            onClick={() => setFilterStatus("all")}
             className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-              filterStatus === 'all'
-                ? 'bg-kawa-green text-black'
-                : 'bg-kawa-gray text-gray-400 border border-gray-700 hover:text-white'
+              filterStatus === "all"
+                ? "bg-kawa-green text-black"
+                : "bg-kawa-gray text-gray-400 border border-gray-700 hover:text-white"
             }`}
           >
             Todas ({orders.length})
           </button>
-          {uniqueStatuses.map(status => (
+          {uniqueStatuses.map((status) => (
             <button
               key={status}
               onClick={() => setFilterStatus(status)}
               className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
                 filterStatus === status
-                  ? 'bg-kawa-green text-black'
-                  : 'bg-kawa-gray text-gray-400 border border-gray-700 hover:text-white'
+                  ? "bg-kawa-green text-black"
+                  : "bg-kawa-gray text-gray-400 border border-gray-700 hover:text-white"
               }`}
             >
-              {statusLabels[status] || status} ({orders.filter(o => o.status === status).length})
+              {statusLabels[status] || status} (
+              {orders.filter((o) => o.status === status).length})
             </button>
           ))}
         </div>
@@ -937,17 +1144,23 @@ function OrdersTab({
       <div className="flex gap-4">
         <div className="bg-kawa-gray px-4 py-2 rounded-lg border border-gray-800">
           <span className="text-xs text-gray-500">Ingresos:</span>
-          <span className="text-sm text-green-400 font-bold ml-2">{formatCurrency(totalRevenue)}</span>
+          <span className="text-sm text-green-400 font-bold ml-2">
+            {formatCurrency(totalRevenue)}
+          </span>
         </div>
         <div className="bg-kawa-gray px-4 py-2 rounded-lg border border-gray-800">
           <span className="text-xs text-gray-500">Ganancia:</span>
-          <span className={`text-sm font-bold ml-2 ${totalProfit >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+          <span
+            className={`text-sm font-bold ml-2 ${totalProfit >= 0 ? "text-green-400" : "text-red-400"}`}
+          >
             {formatCurrency(totalProfit)}
           </span>
         </div>
         <div className="bg-kawa-gray px-4 py-2 rounded-lg border border-gray-800">
           <span className="text-xs text-gray-500">Mostrando:</span>
-          <span className="text-sm text-white font-bold ml-2">{filteredOrders.length}</span>
+          <span className="text-sm text-white font-bold ml-2">
+            {filteredOrders.length}
+          </span>
         </div>
       </div>
 
@@ -957,47 +1170,76 @@ function OrdersTab({
           <table className="min-w-full">
             <thead>
               <tr className="border-b border-gray-700 bg-kawa-black/50">
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Orden</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Cliente</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Estado</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Pago</th>
-                <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Total</th>
-                <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Ganancia</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Fecha</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                  Orden
+                </th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                  Cliente
+                </th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                  Estado
+                </th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                  Pago
+                </th>
+                <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">
+                  Total
+                </th>
+                <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">
+                  Ganancia
+                </th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                  Fecha
+                </th>
                 <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase"></th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-800">
               {filteredOrders.map((order) => (
-                <tr key={order.id} className="hover:bg-kawa-black/30 transition-colors">
+                <tr
+                  key={order.id}
+                  className="hover:bg-kawa-black/30 transition-colors"
+                >
                   <td className="px-4 py-3">
-                    <span className="text-sm text-white font-mono">{order.order_number}</span>
+                    <span className="text-sm text-white font-mono">
+                      {order.order_number}
+                    </span>
                   </td>
                   <td className="px-4 py-3">
                     <p className="text-sm text-white">{order.customer.name}</p>
-                    <p className="text-xs text-gray-500">{order.customer.phone}</p>
+                    <p className="text-xs text-gray-500">
+                      {order.customer.phone}
+                    </p>
                   </td>
                   <td className="px-4 py-3">
-                    <span className={`px-2 py-1 rounded-full text-xs font-medium border ${statusColors[order.status] || 'bg-gray-800 text-gray-400 border-gray-600'}`}>
+                    <span
+                      className={`px-2 py-1 rounded-full text-xs font-medium border ${statusColors[order.status] || "bg-gray-800 text-gray-400 border-gray-600"}`}
+                    >
                       {statusLabels[order.status] || order.status}
                     </span>
                   </td>
                   <td className="px-4 py-3">
                     <span className="text-sm text-gray-300">
-                      {paymentLabels[order.payment_method || ''] || order.payment_method || '-'}
+                      {paymentLabels[order.payment_method || ""] ||
+                        order.payment_method ||
+                        "-"}
                     </span>
                   </td>
                   <td className="px-4 py-3 text-right">
-                    <span className="text-sm text-green-400 font-medium">{formatCurrency(order.total)}</span>
+                    <span className="text-sm text-green-400 font-medium">
+                      {formatCurrency(order.total)}
+                    </span>
                   </td>
                   <td className="px-4 py-3 text-right">
-                    <span className={`text-sm font-medium ${order.profit >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                    <span
+                      className={`text-sm font-medium ${order.profit >= 0 ? "text-green-400" : "text-red-400"}`}
+                    >
                       {formatCurrency(order.profit)}
                     </span>
                   </td>
                   <td className="px-4 py-3">
                     <span className="text-sm text-gray-400">
-                      {new Date(order.created_at).toLocaleDateString('es-CO')}
+                      {new Date(order.created_at).toLocaleDateString("es-CO")}
                     </span>
                   </td>
                   <td className="px-4 py-3 text-center">
@@ -1055,7 +1297,10 @@ function OrderDetailModal({
   paymentLabels: Record<string, string>;
 }) {
   return (
-    <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4" onClick={onClose}>
+    <div
+      className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4"
+      onClick={onClose}
+    >
       <div
         className="bg-kawa-gray border border-gray-700 rounded-xl max-w-2xl w-full max-h-[85vh] overflow-y-auto"
         onClick={(e) => e.stopPropagation()}
@@ -1063,17 +1308,28 @@ function OrderDetailModal({
         {/* Header */}
         <div className="flex items-center justify-between p-5 border-b border-gray-700">
           <div>
-            <h3 className="text-lg font-bold text-white font-mono">{order.order_number}</h3>
+            <h3 className="text-lg font-bold text-white font-mono">
+              {order.order_number}
+            </h3>
             <div className="flex items-center gap-2 mt-1">
-              <span className={`px-2 py-0.5 rounded-full text-xs font-medium border ${statusColors[order.status] || ''}`}>
+              <span
+                className={`px-2 py-0.5 rounded-full text-xs font-medium border ${statusColors[order.status] || ""}`}
+              >
                 {statusLabels[order.status] || order.status}
               </span>
               <span className="text-xs text-gray-500">
-                {new Date(order.created_at).toLocaleDateString('es-CO', { year: 'numeric', month: 'long', day: 'numeric' })}
+                {new Date(order.created_at).toLocaleDateString("es-CO", {
+                  year: "numeric",
+                  month: "long",
+                  day: "numeric",
+                })}
               </span>
             </div>
           </div>
-          <button onClick={onClose} className="text-gray-400 hover:text-white transition-colors">
+          <button
+            onClick={onClose}
+            className="text-gray-400 hover:text-white transition-colors"
+          >
             <X size={20} />
           </button>
         </div>
@@ -1083,7 +1339,9 @@ function OrderDetailModal({
           <div className="flex items-start gap-3">
             <User size={18} className="text-gray-500 mt-0.5" />
             <div>
-              <p className="text-sm text-white font-medium">{order.customer.name}</p>
+              <p className="text-sm text-white font-medium">
+                {order.customer.name}
+              </p>
               <p className="text-xs text-gray-400">{order.customer.email}</p>
               <p className="text-xs text-gray-400">{order.customer.phone}</p>
             </div>
@@ -1091,18 +1349,27 @@ function OrderDetailModal({
 
           {/* Items */}
           <div>
-            <p className="text-xs text-gray-500 uppercase tracking-wider mb-2">Productos</p>
+            <p className="text-xs text-gray-500 uppercase tracking-wider mb-2">
+              Productos
+            </p>
             <div className="space-y-2">
               {order.items.map((item, idx) => (
-                <div key={idx} className="bg-kawa-black/50 rounded-lg px-4 py-3 flex justify-between items-center">
+                <div
+                  key={idx}
+                  className="bg-kawa-black/50 rounded-lg px-4 py-3 flex justify-between items-center"
+                >
                   <div>
                     <p className="text-sm text-white">{item.product_name}</p>
                     <p className="text-xs text-gray-500">
                       {formatCurrency(item.price)} × {item.quantity}
-                      <span className="ml-2 text-gray-600">Costo: {formatCurrency(item.cost)}</span>
+                      <span className="ml-2 text-gray-600">
+                        Costo: {formatCurrency(item.cost)}
+                      </span>
                     </p>
                   </div>
-                  <span className="text-sm text-green-400 font-medium">{formatCurrency(item.subtotal)}</span>
+                  <span className="text-sm text-green-400 font-medium">
+                    {formatCurrency(item.subtotal)}
+                  </span>
                 </div>
               ))}
             </div>
@@ -1117,22 +1384,30 @@ function OrderDetailModal({
             {order.discount > 0 && (
               <div className="flex justify-between text-sm">
                 <span className="text-gray-400">Descuento:</span>
-                <span className="text-orange-400">-{formatCurrency(order.discount)}</span>
+                <span className="text-orange-400">
+                  -{formatCurrency(order.discount)}
+                </span>
               </div>
             )}
             {order.shipping_cost > 0 && (
               <div className="flex justify-between text-sm">
                 <span className="text-gray-400">Envío:</span>
-                <span className="text-gray-300">{formatCurrency(order.shipping_cost)}</span>
+                <span className="text-gray-300">
+                  {formatCurrency(order.shipping_cost)}
+                </span>
               </div>
             )}
             <div className="flex justify-between text-sm">
               <span className="text-gray-400">Costo Total:</span>
-              <span className="text-red-400">{formatCurrency(order.total_cost)}</span>
+              <span className="text-red-400">
+                {formatCurrency(order.total_cost)}
+              </span>
             </div>
             <div className="flex justify-between text-sm pt-2 border-t border-gray-700">
               <span className="text-white font-semibold">Ganancia:</span>
-              <span className={`font-bold ${order.profit >= 0 ? 'text-kawa-green' : 'text-red-400'}`}>
+              <span
+                className={`font-bold ${order.profit >= 0 ? "text-kawa-green" : "text-red-400"}`}
+              >
                 {formatCurrency(order.profit)}
               </span>
             </div>
@@ -1141,14 +1416,26 @@ function OrderDetailModal({
           {/* Payment & Shipping */}
           <div className="grid grid-cols-2 gap-4 text-sm">
             <div>
-              <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">Pago</p>
-              <p className="text-gray-300">{paymentLabels[order.payment_method || ''] || order.payment_method || '-'}</p>
-              <p className="text-xs text-gray-500 capitalize">{order.payment_status || '-'}</p>
+              <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">
+                Pago
+              </p>
+              <p className="text-gray-300">
+                {paymentLabels[order.payment_method || ""] ||
+                  order.payment_method ||
+                  "-"}
+              </p>
+              <p className="text-xs text-gray-500 capitalize">
+                {order.payment_status || "-"}
+              </p>
             </div>
             <div>
-              <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">Envío</p>
+              <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">
+                Envío
+              </p>
               {order.tracking_number ? (
-                <p className="text-gray-300 font-mono text-xs">{order.tracking_number}</p>
+                <p className="text-gray-300 font-mono text-xs">
+                  {order.tracking_number}
+                </p>
               ) : (
                 <p className="text-gray-500">Sin tracking</p>
               )}
@@ -1159,18 +1446,26 @@ function OrderDetailModal({
           <div className="flex flex-wrap gap-4 text-xs">
             <div className="flex items-center gap-1.5 text-gray-400">
               <Calendar size={12} />
-              <span>Creada: {new Date(order.created_at).toLocaleDateString('es-CO')}</span>
+              <span>
+                Creada: {new Date(order.created_at).toLocaleDateString("es-CO")}
+              </span>
             </div>
             {order.shipped_at && (
               <div className="flex items-center gap-1.5 text-purple-400">
                 <Calendar size={12} />
-                <span>Enviada: {new Date(order.shipped_at).toLocaleDateString('es-CO')}</span>
+                <span>
+                  Enviada:{" "}
+                  {new Date(order.shipped_at).toLocaleDateString("es-CO")}
+                </span>
               </div>
             )}
             {order.delivered_at && (
               <div className="flex items-center gap-1.5 text-green-400">
                 <Calendar size={12} />
-                <span>Entregada: {new Date(order.delivered_at).toLocaleDateString('es-CO')}</span>
+                <span>
+                  Entregada:{" "}
+                  {new Date(order.delivered_at).toLocaleDateString("es-CO")}
+                </span>
               </div>
             )}
           </div>
@@ -1189,23 +1484,23 @@ function CreateExpenseModal({
   onSuccess: () => void;
 }) {
   const [form, setForm] = useState({
-    name: '',
-    amount: '',
-    expense_date: new Date().toISOString().split('T')[0],
-    notes: '',
+    name: "",
+    amount: "",
+    expense_date: new Date().toISOString().split("T")[0],
+    notes: "",
   });
   const [saving, setSaving] = useState(false);
-  const [error, setError] = useState('');
+  const [error, setError] = useState("");
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!form.name || !form.amount) {
-      setError('Nombre y monto son obligatorios');
+      setError("Nombre y monto son obligatorios");
       return;
     }
     try {
       setSaving(true);
-      setError('');
+      setError("");
       await financialService.createExpense({
         name: form.name,
         amount: parseFloat(form.amount),
@@ -1215,7 +1510,7 @@ function CreateExpenseModal({
       onSuccess();
       onClose();
     } catch {
-      setError('Error al crear el gasto');
+      setError("Error al crear el gasto");
     } finally {
       setSaving(false);
     }
@@ -1226,7 +1521,10 @@ function CreateExpenseModal({
       <div className="bg-kawa-gray border border-gray-700 rounded-xl w-full max-w-md">
         <div className="flex items-center justify-between p-5 border-b border-gray-700">
           <h3 className="text-lg font-semibold text-white">Nuevo Gasto</h3>
-          <button onClick={onClose} className="text-gray-400 hover:text-white transition-colors">
+          <button
+            onClick={onClose}
+            className="text-gray-400 hover:text-white transition-colors"
+          >
             <X size={20} />
           </button>
         </div>
@@ -1238,18 +1536,20 @@ function CreateExpenseModal({
             <input
               type="text"
               value={form.name}
-              onChange={e => setForm({ ...form, name: e.target.value })}
+              onChange={(e) => setForm({ ...form, name: e.target.value })}
               className="w-full bg-kawa-black border border-gray-700 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-kawa-green"
               placeholder="Ej: Arriendo bodega"
             />
           </div>
 
           <div>
-            <label className="block text-sm text-gray-400 mb-1">Monto (COP) *</label>
+            <label className="block text-sm text-gray-400 mb-1">
+              Monto (COP) *
+            </label>
             <input
               type="number"
               value={form.amount}
-              onChange={e => setForm({ ...form, amount: e.target.value })}
+              onChange={(e) => setForm({ ...form, amount: e.target.value })}
               className="w-full bg-kawa-black border border-gray-700 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-kawa-green"
               placeholder="0"
               min="0"
@@ -1262,7 +1562,9 @@ function CreateExpenseModal({
             <input
               type="date"
               value={form.expense_date}
-              onChange={e => setForm({ ...form, expense_date: e.target.value })}
+              onChange={(e) =>
+                setForm({ ...form, expense_date: e.target.value })
+              }
               className="w-full bg-kawa-black border border-gray-700 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-kawa-green"
             />
           </div>
@@ -1271,7 +1573,7 @@ function CreateExpenseModal({
             <label className="block text-sm text-gray-400 mb-1">Notas</label>
             <textarea
               value={form.notes}
-              onChange={e => setForm({ ...form, notes: e.target.value })}
+              onChange={(e) => setForm({ ...form, notes: e.target.value })}
               className="w-full bg-kawa-black border border-gray-700 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-kawa-green resize-none"
               rows={2}
               placeholder="Notas opcionales..."
@@ -1291,7 +1593,7 @@ function CreateExpenseModal({
               disabled={saving}
               className="flex-1 px-4 py-2 bg-kawa-green text-kawa-black font-semibold rounded-lg hover:bg-kawa-green/90 transition-colors text-sm disabled:opacity-50"
             >
-              {saving ? 'Guardando...' : 'Crear Gasto'}
+              {saving ? "Guardando..." : "Crear Gasto"}
             </button>
           </div>
         </form>
@@ -1309,33 +1611,33 @@ function CreateInterestModal({
   onSuccess: () => void;
 }) {
   const [form, setForm] = useState({
-    name: '',
-    amount: '',
-    source: 'tarjeta_credito',
-    creditor: '',
-    payment_date: new Date().toISOString().split('T')[0],
-    notes: '',
+    name: "",
+    amount: "",
+    source: "tarjeta_credito",
+    creditor: "",
+    payment_date: new Date().toISOString().split("T")[0],
+    notes: "",
   });
   const [saving, setSaving] = useState(false);
-  const [error, setError] = useState('');
+  const [error, setError] = useState("");
 
   const sourceOptions = [
-    { value: 'tarjeta_credito', label: 'Tarjeta de Crédito' },
-    { value: 'banco', label: 'Banco' },
-    { value: 'prestamo_personal', label: 'Préstamo Personal' },
-    { value: 'gota_gota', label: 'Gota a Gota' },
-    { value: 'otro', label: 'Otro' },
+    { value: "tarjeta_credito", label: "Tarjeta de Crédito" },
+    { value: "banco", label: "Banco" },
+    { value: "prestamo_personal", label: "Préstamo Personal" },
+    { value: "gota_gota", label: "Gota a Gota" },
+    { value: "otro", label: "Otro" },
   ];
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!form.name || !form.amount) {
-      setError('Nombre y monto son obligatorios');
+      setError("Nombre y monto son obligatorios");
       return;
     }
     try {
       setSaving(true);
-      setError('');
+      setError("");
       await financialService.createInterest({
         name: form.name,
         amount: parseFloat(form.amount),
@@ -1347,7 +1649,7 @@ function CreateInterestModal({
       onSuccess();
       onClose();
     } catch {
-      setError('Error al crear el interés');
+      setError("Error al crear el interés");
     } finally {
       setSaving(false);
     }
@@ -1358,7 +1660,10 @@ function CreateInterestModal({
       <div className="bg-kawa-gray border border-gray-700 rounded-xl w-full max-w-md">
         <div className="flex items-center justify-between p-5 border-b border-gray-700">
           <h3 className="text-lg font-semibold text-white">Nuevo Interés</h3>
-          <button onClick={onClose} className="text-gray-400 hover:text-white transition-colors">
+          <button
+            onClick={onClose}
+            className="text-gray-400 hover:text-white transition-colors"
+          >
             <X size={20} />
           </button>
         </div>
@@ -1370,18 +1675,20 @@ function CreateInterestModal({
             <input
               type="text"
               value={form.name}
-              onChange={e => setForm({ ...form, name: e.target.value })}
+              onChange={(e) => setForm({ ...form, name: e.target.value })}
               className="w-full bg-kawa-black border border-gray-700 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-kawa-green"
               placeholder="Ej: Interés tarjeta Bancolombia"
             />
           </div>
 
           <div>
-            <label className="block text-sm text-gray-400 mb-1">Monto (COP) *</label>
+            <label className="block text-sm text-gray-400 mb-1">
+              Monto (COP) *
+            </label>
             <input
               type="number"
               value={form.amount}
-              onChange={e => setForm({ ...form, amount: e.target.value })}
+              onChange={(e) => setForm({ ...form, amount: e.target.value })}
               className="w-full bg-kawa-black border border-gray-700 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-kawa-green"
               placeholder="0"
               min="0"
@@ -1393,11 +1700,13 @@ function CreateInterestModal({
             <label className="block text-sm text-gray-400 mb-1">Fuente</label>
             <select
               value={form.source}
-              onChange={e => setForm({ ...form, source: e.target.value })}
+              onChange={(e) => setForm({ ...form, source: e.target.value })}
               className="w-full bg-kawa-black border border-gray-700 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-kawa-green"
             >
-              {sourceOptions.map(opt => (
-                <option key={opt.value} value={opt.value}>{opt.label}</option>
+              {sourceOptions.map((opt) => (
+                <option key={opt.value} value={opt.value}>
+                  {opt.label}
+                </option>
               ))}
             </select>
           </div>
@@ -1407,18 +1716,22 @@ function CreateInterestModal({
             <input
               type="text"
               value={form.creditor}
-              onChange={e => setForm({ ...form, creditor: e.target.value })}
+              onChange={(e) => setForm({ ...form, creditor: e.target.value })}
               className="w-full bg-kawa-black border border-gray-700 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-kawa-green"
               placeholder="Ej: Bancolombia"
             />
           </div>
 
           <div>
-            <label className="block text-sm text-gray-400 mb-1">Fecha de Pago</label>
+            <label className="block text-sm text-gray-400 mb-1">
+              Fecha de Pago
+            </label>
             <input
               type="date"
               value={form.payment_date}
-              onChange={e => setForm({ ...form, payment_date: e.target.value })}
+              onChange={(e) =>
+                setForm({ ...form, payment_date: e.target.value })
+              }
               className="w-full bg-kawa-black border border-gray-700 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-kawa-green"
             />
           </div>
@@ -1427,7 +1740,7 @@ function CreateInterestModal({
             <label className="block text-sm text-gray-400 mb-1">Notas</label>
             <textarea
               value={form.notes}
-              onChange={e => setForm({ ...form, notes: e.target.value })}
+              onChange={(e) => setForm({ ...form, notes: e.target.value })}
               className="w-full bg-kawa-black border border-gray-700 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-kawa-green resize-none"
               rows={2}
               placeholder="Notas opcionales..."
@@ -1447,7 +1760,7 @@ function CreateInterestModal({
               disabled={saving}
               className="flex-1 px-4 py-2 bg-kawa-green text-kawa-black font-semibold rounded-lg hover:bg-kawa-green/90 transition-colors text-sm disabled:opacity-50"
             >
-              {saving ? 'Guardando...' : 'Crear Interés'}
+              {saving ? "Guardando..." : "Crear Interés"}
             </button>
           </div>
         </form>
@@ -1465,33 +1778,33 @@ function CreateLossModal({
   onSuccess: () => void;
 }) {
   const [form, setForm] = useState({
-    name: '',
-    amount: '',
-    reason: 'envio_perdido',
-    order_id: '',
-    loss_date: new Date().toISOString().split('T')[0],
-    notes: '',
+    name: "",
+    amount: "",
+    reason: "envio_perdido",
+    order_id: "",
+    loss_date: new Date().toISOString().split("T")[0],
+    notes: "",
   });
   const [saving, setSaving] = useState(false);
-  const [error, setError] = useState('');
+  const [error, setError] = useState("");
 
   const reasonOptions = [
-    { value: 'envio_perdido', label: 'Envío Perdido' },
-    { value: 'cliente_no_pago', label: 'Cliente No Pagó' },
-    { value: 'devolucion', label: 'Devolución' },
-    { value: 'producto_dañado', label: 'Producto Dañado' },
-    { value: 'otro', label: 'Otro' },
+    { value: "envio_perdido", label: "Envío Perdido" },
+    { value: "cliente_no_pago", label: "Cliente No Pagó" },
+    { value: "devolucion", label: "Devolución" },
+    { value: "producto_dañado", label: "Producto Dañado" },
+    { value: "otro", label: "Otro" },
   ];
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!form.name || !form.amount) {
-      setError('Nombre y monto son obligatorios');
+      setError("Nombre y monto son obligatorios");
       return;
     }
     try {
       setSaving(true);
-      setError('');
+      setError("");
       await financialService.createLoss({
         name: form.name,
         amount: parseFloat(form.amount),
@@ -1503,7 +1816,7 @@ function CreateLossModal({
       onSuccess();
       onClose();
     } catch {
-      setError('Error al crear la pérdida');
+      setError("Error al crear la pérdida");
     } finally {
       setSaving(false);
     }
@@ -1514,7 +1827,10 @@ function CreateLossModal({
       <div className="bg-kawa-gray border border-gray-700 rounded-xl w-full max-w-md">
         <div className="flex items-center justify-between p-5 border-b border-gray-700">
           <h3 className="text-lg font-semibold text-white">Nueva Pérdida</h3>
-          <button onClick={onClose} className="text-gray-400 hover:text-white transition-colors">
+          <button
+            onClick={onClose}
+            className="text-gray-400 hover:text-white transition-colors"
+          >
             <X size={20} />
           </button>
         </div>
@@ -1526,18 +1842,20 @@ function CreateLossModal({
             <input
               type="text"
               value={form.name}
-              onChange={e => setForm({ ...form, name: e.target.value })}
+              onChange={(e) => setForm({ ...form, name: e.target.value })}
               className="w-full bg-kawa-black border border-gray-700 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-kawa-green"
               placeholder="Ej: Paquete perdido por transportadora"
             />
           </div>
 
           <div>
-            <label className="block text-sm text-gray-400 mb-1">Monto (COP) *</label>
+            <label className="block text-sm text-gray-400 mb-1">
+              Monto (COP) *
+            </label>
             <input
               type="number"
               value={form.amount}
-              onChange={e => setForm({ ...form, amount: e.target.value })}
+              onChange={(e) => setForm({ ...form, amount: e.target.value })}
               className="w-full bg-kawa-black border border-gray-700 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-kawa-green"
               placeholder="0"
               min="0"
@@ -1549,21 +1867,25 @@ function CreateLossModal({
             <label className="block text-sm text-gray-400 mb-1">Razón</label>
             <select
               value={form.reason}
-              onChange={e => setForm({ ...form, reason: e.target.value })}
+              onChange={(e) => setForm({ ...form, reason: e.target.value })}
               className="w-full bg-kawa-black border border-gray-700 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-kawa-green"
             >
-              {reasonOptions.map(opt => (
-                <option key={opt.value} value={opt.value}>{opt.label}</option>
+              {reasonOptions.map((opt) => (
+                <option key={opt.value} value={opt.value}>
+                  {opt.label}
+                </option>
               ))}
             </select>
           </div>
 
           <div>
-            <label className="block text-sm text-gray-400 mb-1">ID de Orden</label>
+            <label className="block text-sm text-gray-400 mb-1">
+              ID de Orden
+            </label>
             <input
               type="text"
               value={form.order_id}
-              onChange={e => setForm({ ...form, order_id: e.target.value })}
+              onChange={(e) => setForm({ ...form, order_id: e.target.value })}
               className="w-full bg-kawa-black border border-gray-700 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-kawa-green"
               placeholder="Opcional - ID de la orden relacionada"
             />
@@ -1574,7 +1896,7 @@ function CreateLossModal({
             <input
               type="date"
               value={form.loss_date}
-              onChange={e => setForm({ ...form, loss_date: e.target.value })}
+              onChange={(e) => setForm({ ...form, loss_date: e.target.value })}
               className="w-full bg-kawa-black border border-gray-700 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-kawa-green"
             />
           </div>
@@ -1583,7 +1905,7 @@ function CreateLossModal({
             <label className="block text-sm text-gray-400 mb-1">Notas</label>
             <textarea
               value={form.notes}
-              onChange={e => setForm({ ...form, notes: e.target.value })}
+              onChange={(e) => setForm({ ...form, notes: e.target.value })}
               className="w-full bg-kawa-black border border-gray-700 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-kawa-green resize-none"
               rows={2}
               placeholder="Notas opcionales..."
@@ -1603,7 +1925,7 @@ function CreateLossModal({
               disabled={saving}
               className="flex-1 px-4 py-2 bg-kawa-green text-kawa-black font-semibold rounded-lg hover:bg-kawa-green/90 transition-colors text-sm disabled:opacity-50"
             >
-              {saving ? 'Guardando...' : 'Crear Pérdida'}
+              {saving ? "Guardando..." : "Crear Pérdida"}
             </button>
           </div>
         </form>

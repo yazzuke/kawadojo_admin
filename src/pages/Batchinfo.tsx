@@ -1,14 +1,17 @@
 import { useEffect, useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Edit2, Trash2, Package } from 'lucide-react';
 import { batchesService } from '../services/batchesService';
 import type { BatchWithMetrics } from '../types/batch';
 import { BATCH_STATUSES } from '../types/batch';
 import BatchModal from '../components/BatchModal';
 
-export default function BatchInfoPage() {
-  const { id } = useParams<{ id: string }>();
-  const navigate = useNavigate();
+interface BatchInfoPageProps {
+  batchId: string;
+  onBack?: () => void;
+  onDeleted?: () => void;
+}
+
+export default function BatchInfoPage({ batchId, onBack, onDeleted }: BatchInfoPageProps) {
   const [batch, setBatch] = useState<BatchWithMetrics | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -16,21 +19,21 @@ export default function BatchInfoPage() {
   const [stockFilter, setStockFilter] = useState<'all' | 'sold' | 'available'>('all');
 
   useEffect(() => {
-    if (id) {
+    if (batchId) {
       loadBatch();
     }
-  }, [id]);
+  }, [batchId]);
 
   const loadBatch = async () => {
-    if (!id) return;
+    if (!batchId) return;
     
     try {
       setIsLoading(true);
-      const data = await batchesService.getMetrics(id);
+      const data = await batchesService.getMetrics(batchId);
       setBatch(data);
     } catch (error) {
       console.error('Error loading batch:', error);
-      navigate('/batches');
+      onBack?.();
     } finally {
       setIsLoading(false);
     }
@@ -41,11 +44,11 @@ export default function BatchInfoPage() {
   };
 
   const handleDelete = async () => {
-    if (!id) return;
+    if (!batchId) return;
     
     try {
-      await batchesService.delete(id);
-      navigate('/batches');
+      await batchesService.delete(batchId);
+      onDeleted?.();
     } catch (error: any) {
       alert(error.response?.data?.message || 'Error al eliminar el lote');
       console.error('Error deleting batch:', error);
@@ -118,7 +121,7 @@ export default function BatchInfoPage() {
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
           <button
-            onClick={() => navigate('/batches')}
+            onClick={() => onBack?.()}
             className="text-gray-400 hover:text-white transition-colors"
           >
             <ArrowLeft size={24} />

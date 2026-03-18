@@ -122,18 +122,7 @@ export default function BatchModal({ batch, onClose, onSuccess }: BatchModalProp
 
     try {
       if (batch) {
-        // Update existing batch
-        const updateData: UpdateBatchData = {
-          purchase_total_cost: Number(formData.purchase_total_cost) || 0,
-          shipping_cost: Number(formData.shipping_cost) || 0,
-          customs_fees: Number(formData.customs_fees) || 0,
-          additional_fees: Number(formData.additional_fees) || 0,
-          mailbox_tracking: formData.mailbox_tracking || undefined,
-          notes: formData.notes || undefined,
-        };
-        await batchesService.update(batch.id, updateData);
-
-        // Handle item changes
+        // Handle item changes FIRST (before update, so backend recalculations don't overwrite our values)
         const currentItemProductIds = items.map(item => item.product_id);
         const originalItemProductIds = batch.items.map(item => item.product_id);
 
@@ -192,6 +181,17 @@ export default function BatchModal({ batch, onClose, onSuccess }: BatchModalProp
             mailbox_tracking: formData.mailbox_tracking || undefined,
           });
         }
+
+        // Update batch data LAST so our values stick after any item recalculations
+        const updateData: UpdateBatchData = {
+          purchase_total_cost: Number(formData.purchase_total_cost) || 0,
+          shipping_cost: Number(formData.shipping_cost) || 0,
+          customs_fees: Number(formData.customs_fees) || 0,
+          additional_fees: Number(formData.additional_fees) || 0,
+          mailbox_tracking: formData.mailbox_tracking || undefined,
+          notes: formData.notes || undefined,
+        };
+        await batchesService.update(batch.id, updateData);
       } else {
         // Create new batch
         const createData: CreateBatchData = {

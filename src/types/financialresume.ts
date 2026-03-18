@@ -123,6 +123,8 @@ export interface FinancialSummaryData {
     units_purchased: number;
     potential_revenue: number;
     potential_profit: number;
+    total_potential_profit_net: number;
+    net_roi: string;
   };
 
   profitability: {

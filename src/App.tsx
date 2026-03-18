@@ -7,7 +7,7 @@ import Dashboard from './pages/Dashboard';
 import ProductsPage from './pages/Products';
 import CategoriesPage from './pages/Categories';
 import ModelsPage from './pages/Models';
-import BatchesPage from './pages/Batches';
+import BatchTabsPage from './pages/BatchTabs';
 import OrdersPage from './pages/Orders';
 import BatchInfoPage from './pages/Batchinfo';
 import OrderInfoPage from './pages/OrderInfo';
@@ -33,8 +33,7 @@ function App() {
               <Route path="/products" element={<ProductsPage />} />
               <Route path="/categories" element={<CategoriesPage />} />
               <Route path="/models" element={<ModelsPage />} />
-              <Route path="/batches" element={<BatchesPage />} />
-              <Route path="/batches/:id" element={<BatchInfoPage />} />
+              <Route path="/batches" element={<BatchTabsPage />} />
               <Route path="/orders" element={<OrdersPage />} />
               <Route path="/orders/:id" element={<OrderInfoPage />} />
               <Route path="/financial" element={<FinancialResumePage />} />

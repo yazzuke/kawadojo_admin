@@ -9,7 +9,6 @@ import CategoriesPage from './pages/Categories';
 import ModelsPage from './pages/Models';
 import BatchTabsPage from './pages/BatchTabs';
 import OrdersPage from './pages/Orders';
-import BatchInfoPage from './pages/Batchinfo';
 import OrderInfoPage from './pages/OrderInfo';
 import FinancialResumePage from './pages/FinancialResume';
 import ReviewsPage from './pages/Reviews';

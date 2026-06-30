@@ -36,6 +36,8 @@ export default function ProductModal({ product, initialData, onClose, onSuccess 
   const [previewUrls, setPreviewUrls] = useState<string[]>([]);
   const [existingImages, setExistingImages] = useState<{ id: string; url: string }[]>([]);
   const [deletedImageIds, setDeletedImageIds] = useState<string[]>([]);
+  const [isLoadingImages, setIsLoadingImages] = useState(false);
+  const [corsImageUrls, setCorsImageUrls] = useState<string[]>([]);
 
   useEffect(() => {
     loadData();
@@ -71,6 +73,33 @@ export default function ProductModal({ product, initialData, onClose, onSuccess 
         category_id: initialData.category_id || '',
         compatible_models: initialData.compatible_models?.map((m) => m.id) || [],
       });
+      // Fetch images from source product and preload them
+      if (initialData.images && initialData.images.length > 0) {
+        const urls = initialData.images.map((img) => img.url);
+        setIsLoadingImages(true);
+        Promise.all(
+          initialData.images.map(async (img, idx) => {
+            const response = await fetch(img.url);
+            if (!response.ok) throw new Error('fetch failed');
+            const blob = await response.blob();
+            const filename = img.url.split('/').pop()?.split('?')[0] || `image-${idx}.jpg`;
+            return {
+              file: new File([blob], filename, { type: blob.type || 'image/jpeg' }),
+              previewUrl: URL.createObjectURL(blob),
+            };
+          })
+        )
+          .then((results) => {
+            setImages(results.map((r) => r.file));
+            setPreviewUrls(results.map((r) => r.previewUrl));
+            setCorsImageUrls([]);
+          })
+          .catch(() => {
+            // CORS blocked — show original URLs as reference so user knows which images to re-upload
+            setCorsImageUrls(urls);
+          })
+          .finally(() => setIsLoadingImages(false));
+      }
     }
   }, [product, initialData]);
 
@@ -370,6 +399,34 @@ export default function ProductModal({ product, initialData, onClose, onSuccess 
             <label className="block text-sm font-medium text-gray-300 mb-2">
               Imágenes
             </label>
+
+            {/* Loading state while fetching images from duplicate source */}
+            {isLoadingImages && (
+              <div className="flex items-center gap-2 mb-2 text-sm text-gray-400">
+                <Loader2 size={14} className="animate-spin" />
+                Cargando imágenes del producto original...
+              </div>
+            )}
+
+            {/* CORS fallback: show original images as reference */}
+            {corsImageUrls.length > 0 && (
+              <div className="mb-3 p-3 bg-yellow-900/30 border border-yellow-700/50 rounded-lg">
+                <p className="text-xs text-yellow-400 font-medium mb-2">
+                  ⚠ No se pudieron precargar las imágenes (CORS). Súbelas manualmente — aquí están las originales de referencia:
+                </p>
+                <div className="flex gap-2 flex-wrap">
+                  {corsImageUrls.map((url, i) => (
+                    <img
+                      key={i}
+                      src={url}
+                      alt={`ref-${i}`}
+                      className="h-16 w-16 object-cover rounded-lg border border-yellow-700/50"
+                    />
+                  ))}
+                </div>
+              </div>
+            )}
+
             <div className="grid grid-cols-4 gap-2 mb-2">
               {/* Existing images from server */}
               {existingImages.map((img, index) => (

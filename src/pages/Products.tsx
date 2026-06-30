@@ -56,12 +56,37 @@ export default function ProductsPage() {
     setIsModalOpen(true);
   };
 
+  const generateSlug = (name: string) =>
+    name
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/(^-|-$)/g, '');
+
   const handleDuplicate = (product: Product) => {
+    // Strip existing -NN suffix to get base name
+    const suffixMatch = product.name.match(/^(.*?)-(\d{2,})$/);
+    const baseName = suffixMatch ? suffixMatch[1] : product.name;
+
+    // Find the highest existing number for this base name
+    const escapedBase = baseName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const existingNums = products
+      .map((p) => {
+        if (p.name === baseName) return 1;
+        const m = p.name.match(new RegExp(`^${escapedBase}-(\\d+)$`));
+        return m ? parseInt(m[1]) : null;
+      })
+      .filter((n): n is number => n !== null);
+
+    const maxNum = existingNums.length > 0 ? Math.max(...existingNums) : 1;
+    const newName = `${baseName}-${String(maxNum + 1).padStart(2, '0')}`;
+
     setSelectedProduct(null);
     setDuplicateData({
       ...product,
-      name: `${product.name} (DUPL)`,
-      slug: `${product.slug}-dupl`,
+      name: newName,
+      slug: generateSlug(newName),
     });
     setIsModalOpen(true);
   };

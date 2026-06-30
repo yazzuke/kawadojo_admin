@@ -11,7 +11,10 @@ import {
   ShipWheel,
   ShoppingBag,
   TrendingUp,
-  MessageSquare
+  MessageSquare,
+  ReceiptJapaneseYen
+  
+
 } from 'lucide-react';
 import { useState } from 'react';
 
@@ -24,6 +27,8 @@ const navItems = [
   { to: '/orders', icon: ShoppingBag, label: 'Órdenes' },
   { to: '/financial', icon: TrendingUp, label: 'Finanzas' },
   { to: '/reviews', icon: MessageSquare, label: 'Reseñas' },
+  { to: '/users', icon: LayoutDashboard, label: 'Usuarios' },
+  { to: '/impex', icon: ReceiptJapaneseYen, label: 'Impex' },
 ];
 
 export default function AdminLayout() {

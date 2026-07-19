@@ -30,6 +30,7 @@ export const productService = {
     formData.append('is_original', data.is_original.toString());
     formData.append('source', data.source);
     formData.append('category_id', data.category_id);
+    if (data.group_tag) formData.append('group_tag', data.group_tag);
     
     // Compatible models es un array de IDs
     data.compatible_models.forEach((modelId) => {
@@ -62,6 +63,7 @@ export const productService = {
     if (data.is_original !== undefined) formData.append('is_original', data.is_original.toString());
     if (data.source) formData.append('source', data.source);
     if (data.category_id) formData.append('category_id', data.category_id);
+    if (data.group_tag !== undefined) formData.append('group_tag', data.group_tag);
     
     if (data.compatible_models) {
       data.compatible_models.forEach((modelId) => {
@@ -85,6 +87,26 @@ export const productService = {
       },
     });
     return response.data.data;
+  },
+
+  async getTags(): Promise<string[]> {
+    const response = await api.get<ApiResponse<string[]>>('/products/tags');
+    return response.data.data;
+  },
+
+  async batchTagProducts(productIds: string[], groupTag: string): Promise<any> {
+    const response = await api.patch('/products/batch-tag', {
+      product_ids: productIds,
+      group_tag: groupTag
+    });
+    return response.data;
+  },
+
+  async batchTagRemoveProducts(productIds: string[]): Promise<any> {
+    const response = await api.patch('/products/batch-tag-remove', {
+      product_ids: productIds
+    });
+    return response.data;
   },
 
   async delete(id: string): Promise<void> {

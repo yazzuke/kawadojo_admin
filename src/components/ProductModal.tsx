@@ -29,6 +29,7 @@ export default function ProductModal({ product, initialData, onClose, onSuccess 
     is_original: true,
     source: '',
     category_id: '',
+    group_tag: '',
     compatible_models: [] as string[],
   });
 
@@ -56,6 +57,7 @@ export default function ProductModal({ product, initialData, onClose, onSuccess 
         is_original: product.is_original,
         source: product.source,
         category_id: product.category_id,
+        group_tag: product.group_tag || '',
         compatible_models: product.compatible_models.map((m) => m.id),
       });
       setExistingImages(product.images.map((img) => ({ id: img.id, url: img.url })));
@@ -71,6 +73,7 @@ export default function ProductModal({ product, initialData, onClose, onSuccess 
         is_original: initialData.is_original ?? true,
         source: initialData.source || '',
         category_id: initialData.category_id || '',
+        group_tag: initialData.group_tag || '',
         compatible_models: initialData.compatible_models?.map((m) => m.id) || [],
       });
       // Fetch images from source product and preload them
@@ -186,6 +189,7 @@ export default function ProductModal({ product, initialData, onClose, onSuccess 
         is_original: formData.is_original,
         source: formData.source,
         category_id: formData.category_id,
+        group_tag: formData.group_tag,
         compatible_models: formData.compatible_models,
         images: images,
         deleted_images: deletedImageIds.length > 0 ? deletedImageIds : undefined,
@@ -258,8 +262,8 @@ export default function ProductModal({ product, initialData, onClose, onSuccess 
             </div>
           </div>
 
-          {/* Price, Cost & Category */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {/* Price, Cost, Category & Group Tag */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-300 mb-2">
                 Precio *
@@ -301,6 +305,19 @@ export default function ProductModal({ product, initialData, onClose, onSuccess 
                   </option>
                 ))}
               </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-300 mb-2">
+                Tag de grupo <span className="text-xs text-gray-500 font-normal">(Opcional)</span>
+              </label>
+              <input
+                type="text"
+                list="available-group-tags"
+                placeholder="Ej: motorarranque300"
+                value={formData.group_tag || ''}
+                onChange={(e) => setFormData({ ...formData, group_tag: e.target.value })}
+                className="w-full px-4 py-2 bg-kawa-black border border-gray-700 rounded-lg text-white focus:outline-none focus:border-kawa-green"
+              />
             </div>
           </div>
 

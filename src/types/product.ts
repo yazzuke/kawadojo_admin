@@ -34,6 +34,7 @@ export interface Product {
   is_original: boolean;
   condition: 'nuevo' | 'usado';
   source: string;
+  group_tag: string | null;
   created_at: string;
   updated_at: string;
   category_name: string;
@@ -53,6 +54,7 @@ export interface CreateProductData {
   is_original: boolean;
   source: string;
   category_id: string;
+  group_tag?: string;
   compatible_models: string[];
   images: File[];
   deleted_images?: string[];

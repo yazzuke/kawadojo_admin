@@ -1,5 +1,5 @@
 import api from './api';
-import type { Product, CreateProductData } from '../types/product';
+import type { Product, CreateProductData, ResalePricingItem } from '../types/product';
 
 interface ApiResponse<T> {
   success: boolean;
@@ -7,6 +7,12 @@ interface ApiResponse<T> {
 }
 
 export const productService = {
+  async getResalePricing(): Promise<ResalePricingItem[]> {
+    const response = await api.get<ApiResponse<ResalePricingItem[]>>('/products/inventory/resale-pricing');
+    // Si la API devuelve un arreglo directamente o envuelto en data
+    return Array.isArray(response.data) ? response.data : response.data.data;
+  },
+
   async getAll(): Promise<Product[]> {
     const response = await api.get<ApiResponse<Product[]>>('/products');
     return response.data.data;

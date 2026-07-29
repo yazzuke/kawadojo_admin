@@ -1,8 +1,9 @@
-import { Navigate, Outlet } from 'react-router-dom';
+import { Navigate, Outlet, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 
 export default function ProtectedRoute() {
-  const { isAuthenticated, isLoading } = useAuth();
+  const { isAuthenticated, isLoading, user } = useAuth();
+  const location = useLocation();
 
   if (isLoading) {
     return (
@@ -14,6 +15,16 @@ export default function ProtectedRoute() {
 
   if (!isAuthenticated) {
     return <Navigate to="/login" replace />;
+  }
+
+  // Si es admin normal y no está en resale-pricing, lo mandamos para allá
+  if (user?.role === 'admin' && location.pathname !== '/resale-pricing') {
+    return <Navigate to="/resale-pricing" replace />;
+  }
+
+  // Si es super_admin y va al root o catch-all que lo mande al dashboard
+  if (user?.role === 'super_admin' && (location.pathname === '/' || location.pathname === '')) {
+    return <Navigate to="/dashboard" replace />;
   }
 
   return <Outlet />;

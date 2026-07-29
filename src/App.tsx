@@ -16,6 +16,8 @@ import ClientReviewPage from './pages/ClientReview';
 import TestimonialsPage from './pages/Testimonials';
 import UsersPage from './pages/Users';
 import ImpexPage from './pages/Impex';
+import ResalePricingPage from './pages/ResalePricing';
+
 function App() {
   return (
     <AuthProvider>
@@ -40,6 +42,7 @@ function App() {
               <Route path="/reviews" element={<ReviewsPage />} />
               <Route path="/users" element={<UsersPage />} />
               <Route path="/impex" element={<ImpexPage />} />
+              <Route path="/resale-pricing" element={<ResalePricingPage />} />
             </Route>
           </Route>
 

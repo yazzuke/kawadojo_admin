@@ -21,6 +21,7 @@ import {
   Plus,
 } from "lucide-react";
 import { financialService } from "../services/financialresumeService";
+import { orderService } from "../services/orderService";
 import ProfitWithdrawalsTab from "../components/ProfitWithdrawalsTab";
 import type {
   FinancialSummaryData,
@@ -28,6 +29,11 @@ import type {
   MonthData,
   OrderListItem,
 } from "../types/financialresume";
+import type {
+  MetricsByTagResponse,
+  MetricsByTagGroup,
+  MetricsByTagSale,
+} from "../types/order";
 
 export default function FinancialResumePage() {
   const [summary, setSummary] = useState<FinancialSummaryData | null>(null);
@@ -35,9 +41,17 @@ export default function FinancialResumePage() {
   const [totalWithdrawn, setTotalWithdrawn] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [year, setYear] = useState(new Date().getFullYear());
-  const [activeTab, setActiveTab] = useState<"overview" | "monthly">(
+  const [activeTab, setActiveTab] = useState<"overview" | "monthly" | "byTag">(
     "overview",
   );
+  const [tagMetrics, setTagMetrics] = useState<MetricsByTagResponse | null>(
+    null,
+  );
+  const [isTagMetricsLoading, setIsTagMetricsLoading] = useState(false);
+  const [tagDateFilters, setTagDateFilters] = useState({
+    from_date: "",
+    to_date: "",
+  });
   const [showExpenseModal, setShowExpenseModal] = useState(false);
   const [showInterestModal, setShowInterestModal] = useState(false);
   const [showLossModal, setShowLossModal] = useState(false);
@@ -45,6 +59,12 @@ export default function FinancialResumePage() {
   useEffect(() => {
     loadData();
   }, [year]);
+
+  useEffect(() => {
+    if (activeTab === "byTag" && !tagMetrics && !isTagMetricsLoading) {
+      void loadTagMetrics();
+    }
+  }, [activeTab, tagMetrics, isTagMetricsLoading]);
 
   const loadData = async () => {
     try {
@@ -59,6 +79,18 @@ export default function FinancialResumePage() {
       console.error("Error loading financial data:", error);
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const loadTagMetrics = async (fromDate?: string, toDate?: string) => {
+    try {
+      setIsTagMetricsLoading(true);
+      const data = await orderService.getMetricsByTag(fromDate, toDate);
+      setTagMetrics(data);
+    } catch (error) {
+      console.error("Error loading by-tag metrics:", error);
+    } finally {
+      setIsTagMetricsLoading(false);
     }
   };
 
@@ -153,6 +185,16 @@ export default function FinancialResumePage() {
         >
           Mes a Mes
         </button>
+        <button
+          onClick={() => setActiveTab("byTag")}
+          className={`px-5 py-2.5 rounded-t-lg font-medium transition-colors ${
+            activeTab === "byTag"
+              ? "bg-kawa-gray text-kawa-green border-b-2 border-kawa-green"
+              : "text-gray-400 hover:text-white"
+          }`}
+        >
+          Métricas por Tag
+        </button>
       </div>
 
       {activeTab === "overview" ? (
@@ -168,8 +210,29 @@ export default function FinancialResumePage() {
           totalWithdrawn={totalWithdrawn}
           setTotalWithdrawn={setTotalWithdrawn}
         />
-      ) : (
+      ) : activeTab === "monthly" ? (
         <MonthlyTab monthly={monthly} formatCurrency={formatCurrency} />
+      ) : (
+        <ByTagMetricsTab
+          data={tagMetrics}
+          isLoading={isTagMetricsLoading}
+          fromDate={tagDateFilters.from_date}
+          toDate={tagDateFilters.to_date}
+          onFromDateChange={(value) =>
+            setTagDateFilters((prev) => ({ ...prev, from_date: value }))
+          }
+          onToDateChange={(value) =>
+            setTagDateFilters((prev) => ({ ...prev, to_date: value }))
+          }
+          onApplyFilters={() =>
+            loadTagMetrics(tagDateFilters.from_date, tagDateFilters.to_date)
+          }
+          onClearFilters={() => {
+            setTagDateFilters({ from_date: "", to_date: "" });
+            void loadTagMetrics();
+          }}
+          formatCurrency={formatCurrency}
+        />
       )}
 
       {/* Create Modals */}
@@ -669,6 +732,257 @@ function OverviewTab({
 
       {/* Orders List */}
       <OrdersTab orders={summary.orders_list} formatCurrency={formatCurrency} />
+    </div>
+  );
+}
+
+function ByTagMetricsTab({
+  data,
+  isLoading,
+  fromDate,
+  toDate,
+  onFromDateChange,
+  onToDateChange,
+  onApplyFilters,
+  onClearFilters,
+  formatCurrency,
+}: {
+  data: MetricsByTagResponse | null;
+  isLoading: boolean;
+  fromDate: string;
+  toDate: string;
+  onFromDateChange: (value: string) => void;
+  onToDateChange: (value: string) => void;
+  onApplyFilters: () => void;
+  onClearFilters: () => void;
+  formatCurrency: (n: number) => string;
+}) {
+  const [selectedTagView, setSelectedTagView] = useState<string>("all");
+
+  const availableTags = data?.grouped.map((g) => g.tag) || [];
+
+  useEffect(() => {
+    if (selectedTagView !== "all" && selectedTagView !== "no-tag") {
+      const stillExists = availableTags.includes(selectedTagView);
+      if (!stillExists) {
+        setSelectedTagView("all");
+      }
+    }
+  }, [availableTags, selectedTagView]);
+
+  const filteredGroups =
+    selectedTagView === "all" || selectedTagView === "no-tag"
+      ? data?.grouped || []
+      : (data?.grouped || []).filter((g) => g.tag === selectedTagView);
+
+  const noTagTotals = (data?.no_tag_sales || []).reduce(
+    (acc, sale) => {
+      acc.units += sale.quantity;
+      acc.revenue += sale.subtotal;
+      acc.cost += sale.unit_cost * sale.quantity;
+      acc.profit += sale.profit;
+      return acc;
+    },
+    { units: 0, revenue: 0, cost: 0, profit: 0 },
+  );
+
+  const noTagMargin =
+    noTagTotals.revenue > 0
+      ? Math.round((noTagTotals.profit / noTagTotals.revenue) * 100)
+      : 0;
+
+  return (
+    <div className="space-y-6">
+      <div className="bg-kawa-gray p-4 rounded-lg border border-gray-800">
+        <div className="flex flex-col lg:flex-row gap-3 lg:items-end">
+          <div>
+            <label className="block text-xs text-gray-400 mb-1">Desde</label>
+            <input
+              type="date"
+              value={fromDate}
+              onChange={(e) => onFromDateChange(e.target.value)}
+              className="px-3 py-2 bg-kawa-black border border-gray-700 rounded-lg text-white focus:outline-none focus:border-kawa-green"
+            />
+          </div>
+          <div>
+            <label className="block text-xs text-gray-400 mb-1">Hasta</label>
+            <input
+              type="date"
+              value={toDate}
+              onChange={(e) => onToDateChange(e.target.value)}
+              className="px-3 py-2 bg-kawa-black border border-gray-700 rounded-lg text-white focus:outline-none focus:border-kawa-green"
+            />
+          </div>
+          <div className="min-w-[260px]">
+            <label className="block text-xs text-gray-400 mb-1">Vista por tag</label>
+            <select
+              value={selectedTagView}
+              onChange={(e) => setSelectedTagView(e.target.value)}
+              className="w-full px-3 py-2 bg-kawa-black border border-gray-700 rounded-lg text-white focus:outline-none focus:border-kawa-green"
+            >
+              <option value="all">Todos los tags</option>
+              <option value="no-tag">Solo sin tag</option>
+              {availableTags.map((tag) => (
+                <option key={tag} value={tag}>
+                  {tag}
+                </option>
+              ))}
+            </select>
+          </div>
+          <button
+            onClick={onApplyFilters}
+            className="px-4 py-2 bg-kawa-green text-black font-semibold rounded-lg hover:bg-kawa-green/90 transition-colors"
+          >
+            Aplicar
+          </button>
+          <button
+            onClick={onClearFilters}
+            className="px-4 py-2 bg-gray-700 text-white font-medium rounded-lg hover:bg-gray-600 transition-colors"
+          >
+            Limpiar
+          </button>
+        </div>
+      </div>
+
+      {!isLoading && data && (
+        <div className="bg-kawa-gray/60 border border-gray-800 rounded-lg px-4 py-3">
+          <div className="flex flex-wrap gap-2 text-xs">
+            <span className="px-2 py-1 rounded bg-kawa-black text-gray-300">
+              Tags: {data.grouped.length}
+            </span>
+            <span className="px-2 py-1 rounded bg-kawa-black text-gray-300">
+              Mostrando: {selectedTagView === "all" ? "Todos" : selectedTagView === "no-tag" ? "Sin tag" : selectedTagView}
+            </span>
+            {selectedTagView !== "all" && (
+              <button
+                onClick={() => setSelectedTagView("all")}
+                className="px-2 py-1 rounded bg-kawa-green/20 text-kawa-green hover:bg-kawa-green/30 transition-colors"
+              >
+                Volver a todos
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+
+      {isLoading && (
+        <div className="flex items-center justify-center h-40">
+          <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-kawa-green"></div>
+        </div>
+      )}
+
+      {!isLoading && data && filteredGroups.length === 0 && data.no_tag_sales.length === 0 && (
+        <div className="bg-kawa-gray p-8 rounded-lg border border-gray-800 text-center text-gray-400">
+          No hay ventas para el rango seleccionado.
+        </div>
+      )}
+
+      {!isLoading && data && selectedTagView !== "no-tag" && filteredGroups.length > 0 && (
+        <div className="space-y-4">
+          {filteredGroups.map((group: MetricsByTagGroup) => (
+            <div
+              key={group.tag}
+              className="bg-kawa-gray rounded-lg border border-gray-800 overflow-hidden"
+            >
+              <div className="p-4 border-b border-gray-800 bg-kawa-black/40 flex flex-wrap items-center gap-3 justify-between">
+                <div>
+                  <p className="text-xs text-gray-400 uppercase tracking-wider">Tag</p>
+                  <p className="text-lg font-bold text-kawa-green">{group.tag}</p>
+                </div>
+                <div className="flex flex-wrap gap-2 text-xs">
+                  <span className="px-2 py-1 rounded bg-gray-800 text-gray-300">Unidades: {group.total_units}</span>
+                  <span className="px-2 py-1 rounded bg-green-900/40 text-green-400">Ingresos: {formatCurrency(group.total_revenue)}</span>
+                  <span className="px-2 py-1 rounded bg-red-900/40 text-red-400">Costo: {formatCurrency(group.total_cost)}</span>
+                  <span className="px-2 py-1 rounded bg-kawa-green/20 text-kawa-green">Ganancia: {formatCurrency(group.total_profit)}</span>
+                  <span className="px-2 py-1 rounded bg-blue-900/40 text-blue-400">Margen: {group.margin_pct}%</span>
+                </div>
+              </div>
+
+              <div className="overflow-x-auto">
+                <table className="min-w-full">
+                  <thead>
+                    <tr className="bg-kawa-black/30 border-b border-gray-800">
+                      <th className="px-3 py-2 text-left text-xs text-gray-500 uppercase">Orden</th>
+                      <th className="px-3 py-2 text-left text-xs text-gray-500 uppercase">Producto</th>
+                      <th className="px-3 py-2 text-right text-xs text-gray-500 uppercase">Cant.</th>
+                      <th className="px-3 py-2 text-right text-xs text-gray-500 uppercase">Subtotal</th>
+                      <th className="px-3 py-2 text-right text-xs text-gray-500 uppercase">Ganancia</th>
+                      <th className="px-3 py-2 text-left text-xs text-gray-500 uppercase">Fecha</th>
+                      <th className="px-3 py-2 text-left text-xs text-gray-500 uppercase">Estado</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-800">
+                    {group.sales.map((sale: MetricsByTagSale, idx: number) => (
+                      <tr key={`${group.tag}-${sale.order_number}-${idx}`} className="hover:bg-kawa-black/20">
+                        <td className="px-3 py-2 text-sm text-white font-mono">{sale.order_number}</td>
+                        <td className="px-3 py-2 text-sm text-gray-200">{sale.product_name}</td>
+                        <td className="px-3 py-2 text-sm text-gray-300 text-right">{sale.quantity}</td>
+                        <td className="px-3 py-2 text-sm text-green-400 text-right">{formatCurrency(sale.subtotal)}</td>
+                        <td className={`px-3 py-2 text-sm text-right ${sale.profit >= 0 ? "text-kawa-green" : "text-red-400"}`}>
+                          {formatCurrency(sale.profit)}
+                        </td>
+                        <td className="px-3 py-2 text-sm text-gray-400">
+                          {new Date(sale.sold_at).toLocaleDateString("es-CO")}
+                        </td>
+                        <td className="px-3 py-2 text-sm text-gray-300 capitalize">{sale.status}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {!isLoading && data && data.no_tag_sales.length > 0 && (
+        <div className="bg-kawa-gray rounded-lg border border-gray-800 overflow-hidden">
+          <div className="p-4 border-b border-gray-800 bg-kawa-black/40 flex flex-wrap gap-2 justify-between items-center">
+            <div>
+              <p className="text-xs text-gray-400 uppercase tracking-wider">Ventas sin tag</p>
+              <p className="text-lg font-bold text-yellow-400">Sin asignación</p>
+            </div>
+            <div className="flex flex-wrap gap-2 text-xs">
+              <span className="px-2 py-1 rounded bg-gray-800 text-gray-300">Unidades: {noTagTotals.units}</span>
+              <span className="px-2 py-1 rounded bg-green-900/40 text-green-400">Ingresos: {formatCurrency(noTagTotals.revenue)}</span>
+              <span className="px-2 py-1 rounded bg-red-900/40 text-red-400">Costo: {formatCurrency(noTagTotals.cost)}</span>
+              <span className="px-2 py-1 rounded bg-kawa-green/20 text-kawa-green">Ganancia: {formatCurrency(noTagTotals.profit)}</span>
+              <span className="px-2 py-1 rounded bg-blue-900/40 text-blue-400">Margen: {noTagMargin}%</span>
+            </div>
+          </div>
+
+          <div className="overflow-x-auto">
+            <table className="min-w-full">
+              <thead>
+                <tr className="bg-kawa-black/30 border-b border-gray-800">
+                  <th className="px-3 py-2 text-left text-xs text-gray-500 uppercase">Orden</th>
+                  <th className="px-3 py-2 text-left text-xs text-gray-500 uppercase">Producto</th>
+                  <th className="px-3 py-2 text-right text-xs text-gray-500 uppercase">Cant.</th>
+                  <th className="px-3 py-2 text-right text-xs text-gray-500 uppercase">Subtotal</th>
+                  <th className="px-3 py-2 text-right text-xs text-gray-500 uppercase">Ganancia</th>
+                  <th className="px-3 py-2 text-left text-xs text-gray-500 uppercase">Fecha</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-800">
+                {data.no_tag_sales.map((sale: MetricsByTagSale, idx: number) => (
+                  <tr key={`${sale.order_number}-no-tag-${idx}`} className="hover:bg-kawa-black/20">
+                    <td className="px-3 py-2 text-sm text-white font-mono">{sale.order_number}</td>
+                    <td className="px-3 py-2 text-sm text-gray-200">{sale.product_name}</td>
+                    <td className="px-3 py-2 text-sm text-gray-300 text-right">{sale.quantity}</td>
+                    <td className="px-3 py-2 text-sm text-green-400 text-right">{formatCurrency(sale.subtotal)}</td>
+                    <td className={`px-3 py-2 text-sm text-right ${sale.profit >= 0 ? "text-kawa-green" : "text-red-400"}`}>
+                      {formatCurrency(sale.profit)}
+                    </td>
+                    <td className="px-3 py-2 text-sm text-gray-400">
+                      {new Date(sale.sold_at).toLocaleDateString("es-CO")}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

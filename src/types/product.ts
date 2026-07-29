@@ -59,3 +59,19 @@ export interface CreateProductData {
   images: File[];
   deleted_images?: string[];
 }
+
+export interface ResalePricingItem {
+  id: string;
+  name: string;
+  condition: string;
+  is_original: boolean;
+  group_tag: string | null;
+  base_cost: number;
+  kawadojo_price: number;
+  adjusted_kawadojo_price: number;
+  recommended_price: number;
+  premium_amount: number;
+  kawadojo_profit: number;
+  papa_profit: number;
+  primary_image: string | null;
+}

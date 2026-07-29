@@ -3,6 +3,7 @@ import type {
   Order,
   OrderFilters,
   SalesMetrics,
+  MetricsByTagResponse,
   SalesByPeriod,
   TopProduct,
   OrdersByStatus,
@@ -52,6 +53,19 @@ export const orderService = {
     if (toDate) params.append('to_date', toDate.toISOString());
 
     const response = await api.get<SalesMetrics>(`/orders/metrics?${params.toString()}`);
+    return response.data;
+  },
+
+  // Obtener métricas agrupadas por tag de producto
+  async getMetricsByTag(fromDate?: string, toDate?: string): Promise<MetricsByTagResponse> {
+    const params = new URLSearchParams();
+    if (fromDate) params.append('from_date', fromDate);
+    if (toDate) params.append('to_date', toDate);
+
+    const query = params.toString();
+    const response = await api.get<MetricsByTagResponse>(
+      query ? `/orders/metrics/by-tag?${query}` : '/orders/metrics/by-tag',
+    );
     return response.data;
   },
 
@@ -112,11 +126,9 @@ export const orderService = {
     return response.data;
   },
 
-  // Actualizar precio de un item
-  async updateItemPrice(orderId: string, itemId: string, productPrice: number): Promise<Order> {
-    const response = await api.put<Order>(`/orders/${orderId}/items/${itemId}`, {
-      product_price: productPrice,
-    });
+  // Actualizar precio o cambiar producto de un item
+  async updateOrderItem(orderId: string, itemId: string, data: { product_price?: number; product_id?: string }): Promise<Order> {
+    const response = await api.put<Order>(`/orders/${orderId}/items/${itemId}`, data);
     return response.data;
   },
 

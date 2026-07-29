@@ -143,6 +143,34 @@ export interface SalesMetrics {
   cancelled_orders: number;
 }
 
+export interface MetricsByTagSale {
+  order_number: string;
+  product_name: string;
+  quantity: number;
+  unit_price: number;
+  unit_cost: number;
+  subtotal: number;
+  profit: number;
+  sold_at: string;
+  status: string;
+}
+
+export interface MetricsByTagGroup {
+  tag: string;
+  total_units: number;
+  total_revenue: number;
+  total_cost: number;
+  total_profit: number;
+  margin_pct: number;
+  sales: MetricsByTagSale[];
+}
+
+export interface MetricsByTagResponse {
+  success: boolean;
+  grouped: MetricsByTagGroup[];
+  no_tag_sales: MetricsByTagSale[];
+}
+
 export interface SalesByPeriod {
   period: string;
   total_orders: number;

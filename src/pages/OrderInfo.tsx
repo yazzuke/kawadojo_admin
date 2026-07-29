@@ -11,11 +11,13 @@ import {
   Edit,
   Save,
   X,
+  RefreshCw,
 } from 'lucide-react';
 import { orderService } from '../services/orderService';
 import type { Order, OrderStatus, OrderItem } from '../types/order';
 import { ORDER_STATUSES, PAYMENT_METHODS, PAYMENT_STATUSES } from '../types/order';
 import EditItemPriceModal from '../components/EditItemPriceModal';
+import ChangeProductModal from '../components/ChangeProductModal';
 
 export default function OrderInfoPage() {
   const { id } = useParams<{ id: string }>();
@@ -43,6 +45,7 @@ export default function OrderInfoPage() {
     admin_notes: '',
   });
   const [editingItem, setEditingItem] = useState<OrderItem | null>(null);
+  const [changingProductItem, setChangingProductItem] = useState<OrderItem | null>(null);
   const [isEditingOrder, setIsEditingOrder] = useState(false);
   const [editShipping, setEditShipping] = useState('');
   const [editDiscount, setEditDiscount] = useState('');
@@ -161,11 +164,24 @@ export default function OrderInfoPage() {
     if (!order) return;
 
     try {
-      await orderService.updateItemPrice(order.id, itemId, newPrice);
+      await orderService.updateOrderItem(order.id, itemId, { product_price: newPrice });
       await loadOrder();
       setEditingItem(null);
     } catch (error) {
       console.error('Error updating item price:', error);
+      throw error;
+    }
+  };
+
+  const handleChangeProduct = async (itemId: string, newProductId: string) => {
+    if (!order) return;
+
+    try {
+      await orderService.updateOrderItem(order.id, itemId, { product_id: newProductId });
+      await loadOrder();
+      setChangingProductItem(null);
+    } catch (error) {
+      console.error('Error changing product:', error);
       throw error;
     }
   };
@@ -392,6 +408,13 @@ export default function OrderInfoPage() {
                     <div className="text-right">
                       <p className="text-white font-bold">{formatCurrency(item.subtotal)}</p>
                     </div>
+                    <button
+                      onClick={() => setChangingProductItem(item)}
+                      className="p-2 text-gray-400 hover:text-blue-500 transition-colors"
+                      title="Cambiar producto"
+                    >
+                      <RefreshCw size={18} />
+                    </button>
                     <button
                       onClick={() => setEditingItem(item)}
                       className="p-2 text-gray-400 hover:text-kawa-green transition-colors"
@@ -802,6 +825,15 @@ export default function OrderInfoPage() {
           item={editingItem}
           onClose={() => setEditingItem(null)}
           onSave={handleUpdateItemPrice}
+        />
+      )}
+
+      {/* Change Product Modal */}
+      {changingProductItem && (
+        <ChangeProductModal
+          item={changingProductItem}
+          onClose={() => setChangingProductItem(null)}
+          onSave={handleChangeProduct}
         />
       )}
 

@@ -29,6 +29,7 @@ const navItems = [
   { to: '/reviews', icon: MessageSquare, label: 'Reseñas' },
   { to: '/users', icon: LayoutDashboard, label: 'Usuarios' },
   { to: '/impex', icon: ReceiptJapaneseYen, label: 'Impex' },
+  { to: '/resale-pricing', icon: Package, label: 'Precios Lista' },
 ];
 
 export default function AdminLayout() {
@@ -71,7 +72,13 @@ export default function AdminLayout() {
 
         {/* Nav */}
         <nav className="p-4 space-y-2">
-          {navItems.map((item) => (
+          {navItems
+            .filter((item) => {
+              if (user?.role === 'super_admin') return true;
+              if (user?.role === 'admin') return item.to === '/resale-pricing';
+              return false; // Por seguridad, si hay otro rol
+            })
+            .map((item) => (
             <NavLink
               key={item.to}
               to={item.to}

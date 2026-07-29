@@ -100,9 +100,6 @@ export default function ResalePricingPage() {
                   Estado
                 </th>
                 <th className="px-6 py-3 text-right text-xs font-medium text-gray-400 uppercase tracking-wider">
-                  Costo Base
-                </th>
-                <th className="px-6 py-3 text-right text-xs font-medium text-gray-400 uppercase tracking-wider">
                   Precio Kawadojo
                 </th>
                 <th className="px-6 py-3 text-right text-xs font-medium text-gray-400 uppercase tracking-wider">
@@ -158,9 +155,6 @@ export default function ResalePricingPage() {
                         <span className="text-xs text-blue-400 font-medium">Original</span>
                       )}
                     </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-right text-gray-400">
-                    {formatCurrency(item.base_cost)}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-right text-gray-400">
                     {formatCurrency(item.adjusted_kawadojo_price)}
@@ -237,16 +231,19 @@ export default function ResalePricingPage() {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-3 p-3 bg-kawa-black rounded-lg text-sm">
-                  <div>
-                    <span className="text-gray-500 text-xs block mb-0.5">Costo Base</span>
-                    <span className="text-gray-300 font-medium">{formatCurrency(item.base_cost)}</span>
-                  </div>
+                <div className="grid grid-cols-1 gap-3 p-3 bg-kawa-black rounded-lg text-sm">
                   <div>
                     <span className="text-gray-500 text-xs block mb-0.5">Precio Kawadojo</span>
-                    <span className="text-gray-300 font-medium">
-                      {formatCurrency(item.adjusted_kawadojo_price)}
-                    </span>
+                    <div className="flex flex-col">
+                      <span className="text-gray-300 font-medium">
+                        {formatCurrency(item.adjusted_kawadojo_price)}
+                      </span>
+                      {item.adjusted_kawadojo_price !== item.kawadojo_price && (
+                        <span className="text-xs text-gray-600 line-through">
+                          {formatCurrency(item.kawadojo_price)}
+                        </span>
+                      )}
+                    </div>
                   </div>
                 </div>
                 

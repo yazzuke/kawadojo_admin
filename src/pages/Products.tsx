@@ -343,13 +343,24 @@ export default function ProductsPage() {
 
             {/* Info */}
             <div className="p-4">
-              <div className="flex justify-between items-start mb-1">
-                <p className="text-xs text-kawa-green">{product.category_name}</p>
-                {product.group_tag && (
-                  <span className="bg-blue-500/10 text-blue-400 border border-blue-500/20 text-[10px] uppercase font-bold px-2 py-0.5 rounded">
-                    {product.group_tag}
-                  </span>
-                )}
+              <div className="flex justify-between items-start mb-1 flex-wrap gap-1">
+                <p className="text-xs text-kawa-green mr-auto">{product.category_name}</p>
+                <div className="flex gap-1 flex-wrap justify-end">
+                  {product.latest_batch ? (
+                    <span className="bg-purple-500/10 text-purple-400 border border-purple-500/20 text-[10px] uppercase font-bold px-2 py-0.5 rounded">
+                      {product.latest_batch.batch_number}
+                    </span>
+                  ) : (
+                    <span className="bg-gray-500/10 text-gray-400 border border-gray-800 text-[10px] uppercase font-bold px-2 py-0.5 rounded">
+                      Lote: Pendiente
+                    </span>
+                  )}
+                  {product.group_tag && (
+                    <span className="bg-blue-500/10 text-blue-400 border border-blue-500/20 text-[10px] uppercase font-bold px-2 py-0.5 rounded">
+                      {product.group_tag}
+                    </span>
+                  )}
+                </div>
               </div>
               <h3 className="text-white font-medium truncate">{product.name}</h3>
               <p className="text-xl font-bold text-kawa-green mt-2">

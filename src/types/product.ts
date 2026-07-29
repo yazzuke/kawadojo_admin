@@ -41,6 +41,22 @@ export interface Product {
   category_slug: string;
   images: ProductImage[];
   compatible_models: CompatibleModel[];
+  batches?: {
+    id: string;
+    batch_number: string;
+    status: string;
+    purchase_date: string;
+    quantity: number;
+    unit_cost: number;
+  }[];
+  latest_batch?: {
+    id: string;
+    batch_number: string;
+    status: string;
+    purchase_date: string;
+    quantity: number;
+    unit_cost: number;
+  } | null;
 }
 
 export interface CreateProductData {

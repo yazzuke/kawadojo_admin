@@ -33,6 +33,7 @@ export const productService = {
     formData.append('description', data.description);
     formData.append('condition', data.condition);
     formData.append('in_stock', data.in_stock.toString());
+    formData.append('is_incoming', data.is_incoming.toString());
     formData.append('is_original', data.is_original.toString());
     formData.append('source', data.source);
     formData.append('category_id', data.category_id);
@@ -66,6 +67,7 @@ export const productService = {
     if (data.description) formData.append('description', data.description);
     if (data.condition) formData.append('condition', data.condition);
     if (data.in_stock !== undefined) formData.append('in_stock', data.in_stock.toString());
+    if (data.is_incoming !== undefined) formData.append('is_incoming', data.is_incoming.toString());
     if (data.is_original !== undefined) formData.append('is_original', data.is_original.toString());
     if (data.source) formData.append('source', data.source);
     if (data.category_id) formData.append('category_id', data.category_id);

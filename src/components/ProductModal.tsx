@@ -26,6 +26,7 @@ export default function ProductModal({ product, initialData, onClose, onSuccess 
     description: '',
     condition: 'usado' as 'nuevo' | 'usado',
     in_stock: true,
+    is_incoming: false,
     is_original: true,
     source: '',
     category_id: '',
@@ -54,6 +55,7 @@ export default function ProductModal({ product, initialData, onClose, onSuccess 
         description: product.description,
         condition: product.condition,
         in_stock: product.in_stock,
+        is_incoming: product.is_incoming ?? false,
         is_original: product.is_original,
         source: product.source,
         category_id: product.category_id,
@@ -70,6 +72,7 @@ export default function ProductModal({ product, initialData, onClose, onSuccess 
         description: initialData.description || '',
         condition: initialData.condition || 'usado',
         in_stock: initialData.in_stock ?? true,
+        is_incoming: initialData.is_incoming ?? false,
         is_original: initialData.is_original ?? true,
         source: initialData.source || '',
         category_id: initialData.category_id || '',
@@ -186,6 +189,7 @@ export default function ProductModal({ product, initialData, onClose, onSuccess 
         description: formData.description,
         condition: formData.condition,
         in_stock: formData.in_stock,
+        is_incoming: formData.is_incoming,
         is_original: formData.is_original,
         source: formData.source,
         category_id: formData.category_id,
@@ -350,7 +354,7 @@ export default function ProductModal({ product, initialData, onClose, onSuccess 
           </div>
 
           {/* Condition & Stock & Original */}
-          <div className="grid grid-cols-3 gap-4">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-300 mb-2">
                 Condición
@@ -373,6 +377,17 @@ export default function ProductModal({ product, initialData, onClose, onSuccess 
                   className="w-5 h-5 rounded border-gray-700 bg-kawa-black text-kawa-green focus:ring-kawa-green"
                 />
                 <span className="text-gray-300">En Stock</span>
+              </label>
+            </div>
+            <div className="flex items-center">
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={formData.is_incoming}
+                  onChange={(e) => setFormData({ ...formData, is_incoming: e.target.checked })}
+                  className="w-5 h-5 rounded border-gray-700 bg-kawa-black text-kawa-green focus:ring-kawa-green"
+                />
+                <span className="text-gray-300">En Camino</span>
               </label>
             </div>
             <div className="flex items-center">

@@ -310,13 +310,23 @@ export default function ProductsPage() {
                 >
                   <Copy size={20} />
                 </button>
-                <button
-                  onClick={() => setDeleteConfirm(product.id)}
-                  className="p-2 bg-red-500 rounded-lg text-white hover:bg-red-600 transition-colors"
-                  title="Eliminar"
-                >
-                  <Trash2 size={20} />
-                </button>
+                {(!product.order_items || product.order_items.length === 0) ? (
+                  <button
+                    onClick={() => setDeleteConfirm(product.id)}
+                    className="p-2 bg-red-500 rounded-lg text-white hover:bg-red-600 transition-colors"
+                    title="Eliminar"
+                  >
+                    <Trash2 size={20} />
+                  </button>
+                ) : (
+                  <button
+                    className="p-2 bg-gray-600 rounded-lg text-gray-400 cursor-not-allowed"
+                    title="No se puede eliminar (tiene órdenes asociadas)"
+                    disabled
+                  >
+                    <Trash2 size={20} />
+                  </button>
+                )}
               </div>
               {/* Status badges */}
               <div className="absolute top-2 left-2 flex flex-col gap-1">
@@ -329,6 +339,16 @@ export default function ProductsPage() {
                 >
                   {product.in_stock ? 'En Stock' : 'Agotado'}
                 </span>
+                {product.is_incoming && (
+                  <span className="px-2 py-1 rounded text-xs font-medium bg-orange-500/90 text-white">
+                    En Camino
+                  </span>
+                )}
+                {product.order_items && product.order_items.length > 0 && (
+                  <span className="px-2 py-1 rounded text-xs font-medium bg-purple-600/90 text-white shadow-lg">
+                    {product.order_items[0].order?.order_number || 'Vendido'}
+                  </span>
+                )}
                 <span
                   className={`px-2 py-1 rounded text-xs font-medium ${
                     product.condition === 'nuevo'

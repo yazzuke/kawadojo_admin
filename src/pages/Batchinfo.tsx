@@ -1,9 +1,12 @@
 import { useEffect, useState } from 'react';
 import { ArrowLeft, Edit2, Trash2, Package } from 'lucide-react';
 import { batchesService } from '../services/batchesService';
+import { productService } from '../services/productService';
 import type { BatchWithMetrics } from '../types/batch';
+import type { Product } from '../types/product';
 import { BATCH_STATUSES } from '../types/batch';
 import BatchModal from '../components/BatchModal';
+import ProductModal from '../components/ProductModal';
 
 interface BatchInfoPageProps {
   batchId: string;
@@ -15,6 +18,8 @@ export default function BatchInfoPage({ batchId, onBack, onDeleted }: BatchInfoP
   const [batch, setBatch] = useState<BatchWithMetrics | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isProductModalOpen, setIsProductModalOpen] = useState(false);
+  const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState(false);
   const [stockFilter, setStockFilter] = useState<'all' | 'sold' | 'available'>('all');
 
@@ -57,6 +62,23 @@ export default function BatchInfoPage({ batchId, onBack, onDeleted }: BatchInfoP
 
   const handleModalSuccess = () => {
     setIsModalOpen(false);
+    loadBatch();
+  };
+
+  const handleProductEdit = async (productId: string) => {
+    try {
+      const product = await productService.getById(productId);
+      setEditingProduct(product);
+      setIsProductModalOpen(true);
+    } catch (error) {
+      console.error('Error loading product for edit:', error);
+      alert('No se pudo cargar la información del producto para editar');
+    }
+  };
+
+  const handleProductModalSuccess = () => {
+    setIsProductModalOpen(false);
+    setEditingProduct(null);
     loadBatch();
   };
 
@@ -391,11 +413,21 @@ export default function BatchInfoPage({ batchId, onBack, onDeleted }: BatchInfoP
                     Cantidad: {item.quantity} unidades
                   </p>
                 </div>
-                <div className="text-right">
-                  <p className="text-sm text-gray-400">Subtotal Costo</p>
-                  <p className="font-bold text-white text-lg">
-                    {formatCurrency(item.quantity * item.unit_cost)}
-                  </p>
+                <div className="text-right space-y-2">
+                  <div>
+                    <p className="text-sm text-gray-400">Subtotal Costo</p>
+                    <p className="font-bold text-white text-lg">
+                      {formatCurrency(item.quantity * item.unit_cost)}
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => handleProductEdit(item.product_id)}
+                    className="inline-flex items-center gap-2 px-3 py-2 text-sm font-medium bg-yellow-600 hover:bg-yellow-700 text-white rounded-lg transition-colors"
+                  >
+                    <Edit2 size={14} />
+                    Editar
+                  </button>
                 </div>
               </div>
               
@@ -444,6 +476,17 @@ export default function BatchInfoPage({ batchId, onBack, onDeleted }: BatchInfoP
           batch={batch}
           onClose={() => setIsModalOpen(false)}
           onSuccess={handleModalSuccess}
+        />
+      )}
+
+      {isProductModalOpen && editingProduct && (
+        <ProductModal
+          product={editingProduct}
+          onClose={() => {
+            setIsProductModalOpen(false);
+            setEditingProduct(null);
+          }}
+          onSuccess={handleProductModalSuccess}
         />
       )}
     </div>

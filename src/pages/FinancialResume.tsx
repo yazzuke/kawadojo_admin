@@ -1279,6 +1279,10 @@ function MonthCard({
   month: MonthData;
   formatCurrency: (n: number) => string;
 }) {
+  const [expandedOrders, setExpandedOrders] = useState(false);
+  const [selectedOrder, setSelectedOrder] = useState<OrderListItem | null>(
+    null,
+  );
   const hasOutflows = month.outflows.total > 0;
 
   return (
@@ -1297,6 +1301,57 @@ function MonthCard({
           {month.net_margin}
         </span>
       </div>
+      {/* Orders toggle */}
+      <div className="mt-4">
+        <button
+          onClick={() => setExpandedOrders((s) => !s)}
+          className="px-3 py-2 bg-kawa-gray rounded-lg border border-gray-700 text-sm text-gray-300 hover:bg-kawa-black/30 transition-colors"
+        >
+          {expandedOrders ? "Ocultar órdenes" : `Ver órdenes (${month.orders?.length || 0})`}
+        </button>
+      </div>
+
+      {expandedOrders && month.orders && month.orders.length > 0 && (
+        <div className="mt-3 space-y-2">
+          {month.orders.map((order) => (
+            <div
+              key={order.id}
+              className="bg-kawa-black/50 rounded-lg px-3 py-2 flex items-center justify-between"
+            >
+              <div>
+                <p className="text-sm text-white">{order.order_number}</p>
+                <p className="text-xs text-gray-500">{order.customer?.name}</p>
+              </div>
+              <div className="flex items-center gap-4">
+                <div className="text-sm text-gray-300">
+                  {order.payment_method || "-"}
+                </div>
+                <div className="text-sm text-green-400 font-medium">
+                  {formatCurrency(order.total)}
+                </div>
+                <button
+                  onClick={() => setSelectedOrder(order)}
+                  className="text-gray-500 hover:text-kawa-green transition-colors"
+                  title="Ver detalle"
+                >
+                  <Eye size={16} />
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {selectedOrder && (
+        <OrderDetailModal
+          order={selectedOrder}
+          onClose={() => setSelectedOrder(null)}
+          formatCurrency={formatCurrency}
+          statusColors={{}}
+          statusLabels={{}}
+          paymentLabels={{}}
+        />
+      )}
 
       <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
         <div>

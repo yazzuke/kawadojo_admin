@@ -31,6 +31,7 @@ export interface Product {
   price: number;
   cost: number | null;
   in_stock: boolean;
+  is_incoming: boolean;
   is_original: boolean;
   condition: 'nuevo' | 'usado';
   source: string;
@@ -57,6 +58,18 @@ export interface Product {
     quantity: number;
     unit_cost: number;
   } | null;
+  order_items?: {
+    id: string;
+    order_id: string;
+    quantity: number;
+    subtotal: number;
+    order?: {
+      id: string;
+      order_number: string;
+      status: string;
+      created_at: string;
+    };
+  }[];
 }
 
 export interface CreateProductData {
@@ -67,6 +80,7 @@ export interface CreateProductData {
   description: string;
   condition: 'nuevo' | 'usado';
   in_stock: boolean;
+  is_incoming: boolean;
   is_original: boolean;
   source: string;
   category_id: string;

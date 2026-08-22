@@ -10,14 +10,12 @@ const PartRow = ({
   part, 
   exchangeRate, 
   usdExchangeRate,
-  onSaveClick, 
-  onEditClick 
+  onSaveClick 
 }: { 
   part: any; 
   exchangeRate: number | string; 
   usdExchangeRate: number | string;
   onSaveClick: (part: any) => void;
-  onEditClick: (part: any) => void;
 }) => {
   const [sellPriceStr, setSellPriceStr] = useState<string>('');
   const isSaving = false;
@@ -299,7 +297,6 @@ const Impex: React.FC = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalType, setModalType] = useState<'save' | 'edit' | null>(null);
   const [motoModels, setMotoModels] = useState<any[]>([]);
-  const [isFetchingModels, setIsFetchingModels] = useState(false);
 
   // Modal Content State
   const [formData, setFormData] = useState({
@@ -321,14 +318,11 @@ const Impex: React.FC = () => {
 
   useEffect(() => {
     const fetchModels = async () => {
-      setIsFetchingModels(true);
       try {
         const models = await impexService.fetchMotoModels();
         setMotoModels(models);
       } catch (err) {
         console.error('Error fetching moto models:', err);
-      } finally {
-        setIsFetchingModels(false);
       }
     };
     fetchModels();
@@ -567,7 +561,6 @@ const Impex: React.FC = () => {
                             exchangeRate={exchangeRate} 
                             usdExchangeRate={usdExchangeRate}
                             onSaveClick={handleOpenSaveModal}
-                            onEditClick={handleOpenEditModal}
                           />
                         ))}
                       </tbody>
@@ -610,7 +603,6 @@ const Impex: React.FC = () => {
                             exchangeRate={exchangeRate} 
                             usdExchangeRate={usdExchangeRate}
                             onSaveClick={handleOpenSaveModal}
-                            onEditClick={handleOpenEditModal}
                           />
                         ))}
                       </tbody>

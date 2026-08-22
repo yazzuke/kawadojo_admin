@@ -1313,7 +1313,7 @@ function MonthCard({
 
       {expandedOrders && month.orders && month.orders.length > 0 && (
         <div className="mt-3 space-y-2">
-          {month.orders.map((order) => (
+          {month.orders.map((order: any) => (
             <div
               key={order.id}
               className="bg-kawa-black/50 rounded-lg px-3 py-2 flex items-center justify-between"

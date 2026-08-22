@@ -169,6 +169,7 @@ export interface MonthData {
     total: number;
     batches: number;
   };
+  orders?: any[];
 }
 
 export interface MonthlySummaryData {

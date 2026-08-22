@@ -17,10 +17,12 @@ import TestimonialsPage from './pages/Testimonials';
 import UsersPage from './pages/Users';
 import ImpexPage from './pages/Impex';
 import ResalePricingPage from './pages/ResalePricing';
+import GlobalToaster from './Utils/Toast';
 
 function App() {
   return (
     <AuthProvider>
+      <GlobalToaster />
       <BrowserRouter>
         <Routes>
           {/* Public routes */}

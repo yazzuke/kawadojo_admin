@@ -24,7 +24,6 @@ export default function ProductSelectorModal({
   const [selected, setSelected] = useState<Map<string, SelectedProduct>>(new Map());
 
   useEffect(() => {
-    // Pre-select already selected products
     const initialSelected = new Map<string, SelectedProduct>();
     selectedProducts.forEach(item => {
       const product = products.find(p => p.id === item.product_id);
@@ -36,8 +35,8 @@ export default function ProductSelectorModal({
   }, [selectedProducts, products]);
 
   const filteredProducts = products.filter(product =>
-    product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    product.category_name.toLowerCase().includes(searchTerm.toLowerCase())
+    (product.name?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
+    (product.category_name?.toLowerCase() || '').includes(searchTerm.toLowerCase())
   );
 
   const toggleProduct = (product: Product) => {

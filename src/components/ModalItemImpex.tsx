@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Info, 
   Tag, 
@@ -8,8 +8,11 @@ import {
   X,
   Banknote,
   TrendingUp,
-  Percent
+  Percent,
+  Link as LinkIcon
 } from 'lucide-react';
+import { productService } from '../services/productService';
+import ProductSelectorModal from './ProductSelectorModal';
 
 // 1. Definimos las interfaces para evitar el error de 'any'
 interface MotoModel {
@@ -32,6 +35,8 @@ interface FormData {
   profit: number;
   margin: number;
   compatible_moto_models: string[];
+  base_product_id?: string | null;
+  base_product?: { id: string; name: string } | null;
 }
 
 interface ModalItemImpexProps {
@@ -57,6 +62,17 @@ const ModalItemImpex: React.FC<ModalItemImpexProps> = ({
   exchangeRate,
   usdExchangeRate,
 }) => {
+  const [isProductSelectorOpen, setIsProductSelectorOpen] = useState(false);
+  const [products, setProducts] = useState<any[]>([]);
+
+  useEffect(() => {
+    if (isOpen) {
+      productService.getAll().then((data: any[]) => {
+        setProducts(data);
+      });
+    }
+  }, [isOpen]);
+
   if (!isOpen) return null;
 
   const copCost = (formData.price_yen || 0) * (Number(exchangeRate) || 0);
@@ -84,6 +100,46 @@ const ModalItemImpex: React.FC<ModalItemImpexProps> = ({
         </div>
 
         <div className="p-6 space-y-8">
+
+          {/* Sección: Vinculación con Catálogo (Plantilla) */}
+          <div className="bg-[#1e1e1e]/40 border border-kawa-green/20 rounded-xl p-4">
+            <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center gap-2">
+                <LinkIcon className="w-5 h-5 text-kawa-green" />
+                <h3 className="text-sm font-semibold text-kawa-green tracking-wide">Vinculación de Catálogo</h3>
+              </div>
+              <button
+                onClick={() => setIsProductSelectorOpen(true)}
+                className="text-xs bg-kawa-green text-black px-3 py-1.5 rounded-lg font-bold hover:bg-opacity-90 transition-all shadow-[0_0_10px_rgba(116,252,50,0.2)]"
+              >
+                {formData.base_product_id ? 'Cambiar Producto Base' : 'Vincular a un Producto'}
+              </button>
+            </div>
+            {formData.base_product ? (
+              <div className="mt-3 flex items-center justify-between bg-black/40 rounded-lg p-3 border border-gray-800">
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded bg-[#2a2a2a] flex items-center justify-center">
+                    <Package className="w-4 h-4 text-gray-400" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-white">{formData.base_product.name}</p>
+                    <p className="text-xs text-gray-400">Este producto se usará como plantilla al convertir a Lote.</p>
+                  </div>
+                </div>
+                <button 
+                  onClick={() => onFormDataChange({ ...formData, base_product_id: null, base_product: null })}
+                  className="text-red-400 hover:text-red-300 p-1"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+            ) : (
+              <p className="text-xs text-gray-400 mt-2">
+                Opcional: Vincula este repuesto a un producto de tu catálogo. Al generar un lote, se clonarán todos los datos (descripción, categoría, tags, compatibilidad) automáticamente.
+              </p>
+            )}
+          </div>
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-8">
             
             {/* Sección: Información Básica */}
@@ -330,6 +386,25 @@ const ModalItemImpex: React.FC<ModalItemImpexProps> = ({
           </div>
         </div>
       </div>
+      
+      {isProductSelectorOpen && (
+        <ProductSelectorModal
+          products={products}
+          selectedProducts={[]}
+          onClose={() => setIsProductSelectorOpen(false)}
+          onConfirm={(selectedItems) => {
+            if (selectedItems.length > 0) {
+              const selected = selectedItems[0].product;
+              onFormDataChange({
+                ...formData,
+                base_product_id: selected.id,
+                base_product: { id: selected.id, name: selected.name }
+              });
+            }
+            setIsProductSelectorOpen(false);
+          }}
+        />
+      )}
     </div>
   );
 };

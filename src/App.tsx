@@ -16,6 +16,7 @@ import ClientReviewPage from './pages/ClientReview';
 import TestimonialsPage from './pages/Testimonials';
 import UsersPage from './pages/Users';
 import ImpexPage from './pages/Impex';
+import EbayPage from './pages/Ebay';
 import ResalePricingPage from './pages/ResalePricing';
 import GlobalToaster from './Utils/Toast';
 
@@ -44,6 +45,7 @@ function App() {
               <Route path="/reviews" element={<ReviewsPage />} />
               <Route path="/users" element={<UsersPage />} />
               <Route path="/impex" element={<ImpexPage />} />
+              <Route path="/ebay" element={<EbayPage />} />
               <Route path="/resale-pricing" element={<ResalePricingPage />} />
             </Route>
           </Route>

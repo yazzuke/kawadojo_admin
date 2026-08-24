@@ -107,16 +107,16 @@ export default function BatchInfoPage({ batchId, onBack, onDeleted }: BatchInfoP
     
     switch (stockFilter) {
       case 'sold':
-        return batch.items.filter(item => !item.product.in_stock);
+        return batch.items.filter(item => !item.product.in_stock && !item.product.is_incoming);
       case 'available':
-        return batch.items.filter(item => item.product.in_stock);
+        return batch.items.filter(item => item.product.in_stock || item.product.is_incoming);
       default:
         return batch.items;
     }
   };
 
-  const soldCount = batch?.items.filter(item => !item.product.in_stock).length || 0;
-  const availableCount = batch?.items.filter(item => item.product.in_stock).length || 0;
+  const soldCount = batch?.items.filter(item => !item.product.in_stock && !item.product.is_incoming).length || 0;
+  const availableCount = batch?.items.filter(item => item.product.in_stock || item.product.is_incoming).length || 0;
 
   if (isLoading) {
     return (
@@ -402,11 +402,13 @@ export default function BatchInfoPage({ batchId, onBack, onDeleted }: BatchInfoP
                   <div className="flex items-center gap-3">
                     <p className="font-medium text-white">{item.product.name}</p>
                     <span className={`px-2 py-1 text-xs font-semibold rounded ${
-                      item.product.in_stock
+                      item.product.is_incoming
+                        ? 'bg-orange-900 bg-opacity-50 text-orange-400 border border-orange-700'
+                        : item.product.in_stock
                         ? 'bg-green-900 bg-opacity-50 text-green-400 border border-green-700'
                         : 'bg-red-900 bg-opacity-50 text-red-400 border border-red-700'
                     }`}>
-                      {item.product.in_stock ? 'Disponible' : 'Vendido'}
+                      {item.product.is_incoming ? 'En Camino' : (item.product.in_stock ? 'Disponible' : 'Vendido')}
                     </span>
                   </div>
                   <p className="text-sm text-gray-400 mt-1">

@@ -5,6 +5,7 @@ export interface Product {
   price: number;
   cost: number | null;
   in_stock: boolean;
+  is_incoming: boolean;
   product_images: Array<{
     id: string;
     url: string;

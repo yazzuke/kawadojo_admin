@@ -36,5 +36,13 @@ export const impexService = {
   getQuotes: async (): Promise<{ success: boolean; data: import('../types/impex').ImpexQuote[] }> => {
     const response = await api.get('/quotes');
     return response.data;
+  },
+  convertQuoteToBatch: async (id: string): Promise<any> => {
+    const response = await api.post(`/quotes/${id}/convert`);
+    return response.data;
+  },
+  deleteQuote: async (id: string): Promise<any> => {
+    const response = await api.delete(`/quotes/${id}`);
+    return response.data;
   }
 };

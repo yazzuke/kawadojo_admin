@@ -20,6 +20,23 @@ export default function ProductsPage() {
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [duplicateData, setDuplicateData] = useState<Partial<Product> | undefined>(undefined);
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
+  
+  const [isBatchEditModalOpen, setIsBatchEditModalOpen] = useState(false);
+  const [isBatchEditing, setIsBatchEditing] = useState(false);
+  const [batchEditData, setBatchEditData] = useState({
+    price: '',
+    cost: '',
+    condition: 'usado' as 'nuevo' | 'usado',
+    in_stock: true,
+    is_incoming: false
+  });
+  const [batchEditFlags, setBatchEditFlags] = useState({
+    price: false,
+    cost: false,
+    condition: false,
+    in_stock: false,
+    is_incoming: false
+  });
 
   useEffect(() => {
     loadProducts();
@@ -27,9 +44,10 @@ export default function ProductsPage() {
 
   useEffect(() => {
     const filtered = products.filter((product) => {
+      const searchLower = searchTerm.toLowerCase();
       const matchesSearch =
-        product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        product.category_name.toLowerCase().includes(searchTerm.toLowerCase());
+        (product.name?.toLowerCase() || '').includes(searchLower) ||
+        (product.category_name?.toLowerCase() || '').includes(searchLower);
       const matchesStock =
         stockFilter === 'all' ||
         (stockFilter === 'in_stock' && product.in_stock) ||
@@ -121,7 +139,7 @@ export default function ProductsPage() {
 
   const submitBatchTag = async () => {
     if (!batchTagValue.trim()) {
-      alert('Por favor ingresa un tag v�lido');
+      alert('Por favor ingresa un tag vlido');
       return;
     }
     try {
@@ -136,6 +154,35 @@ export default function ProductsPage() {
       alert('Hubo un error al aplicar el tag');
     } finally {
       setIsTagging(false);
+    }
+  };
+
+  const submitBatchEdit = async () => {
+    const updates: any = {};
+    if (batchEditFlags.price && batchEditData.price !== '') updates.price = parseFloat(batchEditData.price);
+    if (batchEditFlags.cost && batchEditData.cost !== '') updates.cost = parseFloat(batchEditData.cost);
+    if (batchEditFlags.condition) updates.condition = batchEditData.condition;
+    if (batchEditFlags.in_stock) updates.in_stock = batchEditData.in_stock;
+    if (batchEditFlags.is_incoming) updates.is_incoming = batchEditData.is_incoming;
+
+    if (Object.keys(updates).length === 0) {
+      alert('Selecciona al menos un campo para actualizar');
+      return;
+    }
+
+    try {
+      setIsBatchEditing(true);
+      await productService.batchUpdateProducts(selectedIds, updates);
+      await loadProducts();
+      setSelectedIds([]);
+      setIsBatchEditModalOpen(false);
+      setBatchEditFlags({ price: false, cost: false, condition: false, in_stock: false, is_incoming: false });
+      setBatchEditData({ price: '', cost: '', condition: 'usado', in_stock: true, is_incoming: false });
+    } catch (error) {
+      console.error('Error en edición masiva:', error);
+      alert('Hubo un error al actualizar los productos');
+    } finally {
+      setIsBatchEditing(false);
     }
   };
   const handleDelete = async (id: string) => {
@@ -180,13 +227,22 @@ export default function ProductsPage() {
         <h1 className="text-2xl font-bold text-white">Productos</h1>
         <div className="flex items-center gap-3">
           {selectedIds.length > 0 && (
-            <button
-              onClick={() => setIsBatchTagModalOpen(true)}
-              className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-colors shadow-lg shadow-blue-500/20"
-            >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" /></svg>
-              Tag ({selectedIds.length})
-            </button>
+            <>
+              <button
+                onClick={() => setIsBatchEditModalOpen(true)}
+                className="flex items-center gap-2 px-4 py-2 bg-yellow-600 text-white font-medium rounded-lg hover:bg-yellow-700 transition-colors shadow-lg shadow-yellow-500/20"
+              >
+                <Pencil size={20} />
+                Editar ({selectedIds.length})
+              </button>
+              <button
+                onClick={() => setIsBatchTagModalOpen(true)}
+                className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-colors shadow-lg shadow-blue-500/20"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" /></svg>
+                Tag ({selectedIds.length})
+              </button>
+            </>
           )}
           <button
             onClick={handleCreate}
@@ -330,18 +386,19 @@ export default function ProductsPage() {
               </div>
               {/* Status badges */}
               <div className="absolute top-2 left-2 flex flex-col gap-1">
-                <span
-                  className={`px-2 py-1 rounded text-xs font-medium ${
-                    product.in_stock
-                      ? 'bg-green-500/90 text-white'
-                      : 'bg-red-500/90 text-white'
-                  }`}
-                >
-                  {product.in_stock ? 'En Stock' : 'Agotado'}
-                </span>
-                {product.is_incoming && (
+                {product.is_incoming ? (
                   <span className="px-2 py-1 rounded text-xs font-medium bg-orange-500/90 text-white">
                     En Camino
+                  </span>
+                ) : (
+                  <span
+                    className={`px-2 py-1 rounded text-xs font-medium ${
+                      product.in_stock
+                        ? 'bg-green-500/90 text-white'
+                        : 'bg-red-500/90 text-white'
+                    }`}
+                  >
+                    {product.in_stock ? 'En Stock' : 'Vendido'}
                   </span>
                 )}
                 {product.order_items && product.order_items.length > 0 && (
@@ -491,6 +548,134 @@ export default function ProductsPage() {
                    <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
                  ) : (
                    'Aplicar Tag'
+                 )}
+               </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* Batch Edit Modal */}
+      {isBatchEditModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+          <div className="bg-kawa-gray rounded-xl p-6 w-full max-w-2xl border border-[#333] shadow-xl max-h-[90vh] overflow-y-auto">
+            <h2 className="text-xl font-bold text-white mb-4">Edición Masiva</h2>
+            <p className="text-gray-400 text-sm mb-6">
+              Selecciona los campos que deseas actualizar para <strong>{selectedIds.length}</strong> productos seleccionados.
+            </p>
+
+            <div className="space-y-4">
+              {/* Price */}
+              <div className="flex items-center gap-4 bg-[#111] p-3 rounded-lg border border-[#333]">
+                <input
+                  type="checkbox"
+                  checked={batchEditFlags.price}
+                  onChange={(e) => setBatchEditFlags({ ...batchEditFlags, price: e.target.checked })}
+                  className="w-5 h-5 rounded border-gray-700 bg-kawa-black text-kawa-green focus:ring-kawa-green"
+                />
+                <label className="text-sm font-medium text-gray-300 w-24">Precio</label>
+                <input
+                  type="number"
+                  value={batchEditData.price}
+                  onChange={(e) => setBatchEditData({ ...batchEditData, price: e.target.value })}
+                  disabled={!batchEditFlags.price}
+                  placeholder="Nuevo precio"
+                  className="flex-1 bg-kawa-gray text-white rounded-lg border border-[#444] px-3 py-2 focus:outline-none focus:border-kawa-green disabled:opacity-50"
+                />
+              </div>
+
+              {/* Cost */}
+              <div className="flex items-center gap-4 bg-[#111] p-3 rounded-lg border border-[#333]">
+                <input
+                  type="checkbox"
+                  checked={batchEditFlags.cost}
+                  onChange={(e) => setBatchEditFlags({ ...batchEditFlags, cost: e.target.checked })}
+                  className="w-5 h-5 rounded border-gray-700 bg-kawa-black text-kawa-green focus:ring-kawa-green"
+                />
+                <label className="text-sm font-medium text-gray-300 w-24">Costo</label>
+                <input
+                  type="number"
+                  value={batchEditData.cost}
+                  onChange={(e) => setBatchEditData({ ...batchEditData, cost: e.target.value })}
+                  disabled={!batchEditFlags.cost}
+                  placeholder="Nuevo costo"
+                  className="flex-1 bg-kawa-gray text-white rounded-lg border border-[#444] px-3 py-2 focus:outline-none focus:border-kawa-green disabled:opacity-50"
+                />
+              </div>
+
+              {/* Condition */}
+              <div className="flex items-center gap-4 bg-[#111] p-3 rounded-lg border border-[#333]">
+                <input
+                  type="checkbox"
+                  checked={batchEditFlags.condition}
+                  onChange={(e) => setBatchEditFlags({ ...batchEditFlags, condition: e.target.checked })}
+                  className="w-5 h-5 rounded border-gray-700 bg-kawa-black text-kawa-green focus:ring-kawa-green"
+                />
+                <label className="text-sm font-medium text-gray-300 w-24">Condición</label>
+                <select
+                  value={batchEditData.condition}
+                  onChange={(e) => setBatchEditData({ ...batchEditData, condition: e.target.value as 'nuevo' | 'usado' })}
+                  disabled={!batchEditFlags.condition}
+                  className="flex-1 bg-kawa-gray text-white rounded-lg border border-[#444] px-3 py-2 focus:outline-none focus:border-kawa-green disabled:opacity-50"
+                >
+                  <option value="usado">Usado</option>
+                  <option value="nuevo">Nuevo</option>
+                </select>
+              </div>
+
+              {/* In Stock */}
+              <div className="flex items-center gap-4 bg-[#111] p-3 rounded-lg border border-[#333]">
+                <input
+                  type="checkbox"
+                  checked={batchEditFlags.in_stock}
+                  onChange={(e) => setBatchEditFlags({ ...batchEditFlags, in_stock: e.target.checked })}
+                  className="w-5 h-5 rounded border-gray-700 bg-kawa-black text-kawa-green focus:ring-kawa-green"
+                />
+                <label className="text-sm font-medium text-gray-300 flex-1">En Stock</label>
+                <input
+                  type="checkbox"
+                  checked={batchEditData.in_stock}
+                  onChange={(e) => setBatchEditData({ ...batchEditData, in_stock: e.target.checked })}
+                  disabled={!batchEditFlags.in_stock}
+                  className="w-5 h-5 rounded border-gray-700 bg-kawa-black text-kawa-green focus:ring-kawa-green disabled:opacity-50"
+                />
+              </div>
+
+              {/* Is Incoming */}
+              <div className="flex items-center gap-4 bg-[#111] p-3 rounded-lg border border-[#333]">
+                <input
+                  type="checkbox"
+                  checked={batchEditFlags.is_incoming}
+                  onChange={(e) => setBatchEditFlags({ ...batchEditFlags, is_incoming: e.target.checked })}
+                  className="w-5 h-5 rounded border-gray-700 bg-kawa-black text-kawa-green focus:ring-kawa-green"
+                />
+                <label className="text-sm font-medium text-gray-300 flex-1">En Camino</label>
+                <input
+                  type="checkbox"
+                  checked={batchEditData.is_incoming}
+                  onChange={(e) => setBatchEditData({ ...batchEditData, is_incoming: e.target.checked })}
+                  disabled={!batchEditFlags.is_incoming}
+                  className="w-5 h-5 rounded border-gray-700 bg-kawa-black text-kawa-green focus:ring-kawa-green disabled:opacity-50"
+                />
+              </div>
+            </div>
+
+            <div className="flex gap-4 mt-6">
+               <button 
+                 onClick={() => setIsBatchEditModalOpen(false)}
+                 className="flex-1 py-3 bg-[#333] hover:bg-[#444] text-white rounded-lg transition-colors font-semibold"
+                 disabled={isBatchEditing}
+               >
+                 Cancelar
+               </button>
+               <button 
+                 onClick={submitBatchEdit}
+                 className="flex-1 py-3 bg-yellow-600 hover:bg-yellow-700 text-white rounded-lg transition-colors font-semibold disabled:opacity-50 flex justify-center items-center"
+                 disabled={isBatchEditing}
+               >
+                 {isBatchEditing ? (
+                   <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                 ) : (
+                   'Aplicar Cambios'
                  )}
                </button>
             </div>

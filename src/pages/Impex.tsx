@@ -106,11 +106,13 @@ const PartRow = ({
 const SavedPartsTab = ({ 
   onEdit, 
   exchangeRate, 
-  usdExchangeRate 
+  usdExchangeRate,
+  refreshTrigger
 }: { 
   onEdit: (part: any) => void;
   exchangeRate: number | string;
   usdExchangeRate: number | string;
+  refreshTrigger?: number;
 }) => {
   const [savedParts, setSavedParts] = useState<SavedImpexPart[]>([]);
   const [loading, setLoading] = useState(true);
@@ -135,7 +137,7 @@ const SavedPartsTab = ({
 
   useEffect(() => {
     fetchSavedParts();
-  }, []);
+  }, [refreshTrigger]);
 
   const handleDelete = async (partNoRaw: string) => {
     if (!window.confirm('¿Estás seguro de que deseas eliminar esta pieza? Esta acción no se puede deshacer.')) {
@@ -297,6 +299,7 @@ const Impex: React.FC = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalType, setModalType] = useState<'save' | 'edit' | null>(null);
   const [motoModels, setMotoModels] = useState<any[]>([]);
+  const [refreshKey, setRefreshKey] = useState(0);
 
   // Modal Content State
   const [formData, setFormData] = useState({
@@ -313,18 +316,21 @@ const Impex: React.FC = () => {
     kawadojo_price: 0,
     profit: 0,
     margin: 0,
-    compatible_moto_models: [] as string[]
+    compatible_moto_models: [] as string[],
+    base_product_id: null as string | null | undefined,
+    base_product: null as { id: string; name: string } | null | undefined,
   });
 
+  const fetchModels = async () => {
+    try {
+      const data = await impexService.fetchMotoModels();
+      setMotoModels(data || []);
+    } catch (err) {
+      console.error('Error fetching models:', err);
+    }
+  };
+
   useEffect(() => {
-    const fetchModels = async () => {
-      try {
-        const models = await impexService.fetchMotoModels();
-        setMotoModels(models);
-      } catch (err) {
-        console.error('Error fetching moto models:', err);
-      }
-    };
     fetchModels();
   }, []);
 
@@ -332,7 +338,7 @@ const Impex: React.FC = () => {
     setModalType('save');
     setFormData({
       mark: part.mark || '',
-      part_no: part.part || '',
+      part_no: part.part_no || part.part || '',
       part_no_raw: part.part_no_raw || '',
       name_ja: part.name_ja || '',
       name_es: part.name_es || part.name || '',
@@ -344,7 +350,9 @@ const Impex: React.FC = () => {
       kawadojo_price: part.kawadojo_price || 0,
       profit: part.profit || 0,
       margin: part.margin || 0,
-      compatible_moto_models: []
+      compatible_moto_models: [],
+      base_product_id: null,
+      base_product: null,
     });
     setIsModalOpen(true);
   };
@@ -353,7 +361,7 @@ const Impex: React.FC = () => {
     setModalType('edit');
     setFormData({
       mark: part.mark || '',
-      part_no: part.part || '',
+      part_no: part.part_no || part.part || '',
       part_no_raw: part.part_no_raw || '',
       name_ja: part.name_ja || '',
       name_es: part.name_es || part.name || '',
@@ -365,7 +373,9 @@ const Impex: React.FC = () => {
       kawadojo_price: part.kawadojo_price || 0,
       profit: part.profit || 0,
       margin: part.margin || 0,
-      compatible_moto_models: part.compatible_moto_models || []
+      compatible_moto_models: part.compatible_moto_models || [],
+      base_product_id: part.base_product_id || null,
+      base_product: part.base_product || null,
     });
     setIsModalOpen(true);
   };
@@ -393,10 +403,11 @@ const Impex: React.FC = () => {
           kawadojo_price: formData.kawadojo_price,
           profit: formData.profit,
           margin: formData.margin,
-          compatible_moto_models: formData.compatible_moto_models
+          compatible_moto_models: formData.compatible_moto_models,
+          base_product_id: formData.base_product_id,
         });
-        toast.success('¡Guardado con éxito!');
-      } else {
+        toast.success('Repuesto guardado correctamente');
+      } else if (modalType === 'edit') {
         await impexService.updatePart({
           mark: formData.mark,
           part_no: formData.part_no,
@@ -411,14 +422,14 @@ const Impex: React.FC = () => {
           kawadojo_price: formData.kawadojo_price,
           profit: formData.profit,
           margin: formData.margin,
-          compatible_moto_models: formData.compatible_moto_models
+          compatible_moto_models: formData.compatible_moto_models,
+          base_product_id: formData.base_product_id,
         });
-        toast.success('¡Actualizado con éxito!');
+        toast.success('Repuesto actualizado correctamente');
       }
       // Refresh if we are on the saved tab
       if (activeTab === 'saved') {
-        // We'll need to refresh the list. I'll add a refresh function.
-        // For now, I'll just tell the user.
+        setRefreshKey(prev => prev + 1);
       }
     } catch (err: any) {
       toast.error(err.response?.data?.message || 'Error al procesar la solicitud');
@@ -625,6 +636,7 @@ const Impex: React.FC = () => {
             onEdit={handleOpenEditModal} 
             exchangeRate={exchangeRate}
             usdExchangeRate={usdExchangeRate}
+            refreshTrigger={refreshKey}
           />
         )}
 
@@ -633,8 +645,8 @@ const Impex: React.FC = () => {
         onClose={() => setIsModalOpen(false)}
         onSave={handleSaveSubmit}
         modalType={modalType}
-        formData={formData}
-        onFormDataChange={setFormData}
+        formData={formData as any}
+        onFormDataChange={setFormData as any}
         motoModels={motoModels}
         exchangeRate={exchangeRate}
         usdExchangeRate={usdExchangeRate}

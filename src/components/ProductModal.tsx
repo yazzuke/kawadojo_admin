@@ -373,7 +373,7 @@ export default function ProductModal({ product, initialData, onClose, onSuccess 
                 <input
                   type="checkbox"
                   checked={formData.in_stock}
-                  onChange={(e) => setFormData({ ...formData, in_stock: e.target.checked })}
+                  onChange={(e) => setFormData({ ...formData, in_stock: e.target.checked, is_incoming: e.target.checked ? false : formData.is_incoming })}
                   className="w-5 h-5 rounded border-gray-700 bg-kawa-black text-kawa-green focus:ring-kawa-green"
                 />
                 <span className="text-gray-300">En Stock</span>
@@ -384,7 +384,7 @@ export default function ProductModal({ product, initialData, onClose, onSuccess 
                 <input
                   type="checkbox"
                   checked={formData.is_incoming}
-                  onChange={(e) => setFormData({ ...formData, is_incoming: e.target.checked })}
+                  onChange={(e) => setFormData({ ...formData, is_incoming: e.target.checked, in_stock: e.target.checked ? false : formData.in_stock })}
                   className="w-5 h-5 rounded border-gray-700 bg-kawa-black text-kawa-green focus:ring-kawa-green"
                 />
                 <span className="text-gray-300">En Camino</span>

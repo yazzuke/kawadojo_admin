@@ -44,6 +44,7 @@ export interface ImpexSavePayload {
   profit: number;
   margin: number;
   compatible_moto_models?: string[];
+  base_product_id?: string | null;
 }
 
 export interface SavedImpexPart {
@@ -60,6 +61,8 @@ export interface SavedImpexPart {
   type_id: number | null;
   kawadojo_price: number;
   compatible_moto_models?: string[];
+  base_product_id?: string | null;
+  base_product?: { id: string; name: string; } | null;
   created_at?: string;
   updated_at?: string;
 }

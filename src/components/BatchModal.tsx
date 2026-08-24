@@ -11,6 +11,7 @@ interface BatchModalProps {
   batch: Batch | null;
   onClose: () => void;
   onSuccess: () => void;
+  prefillData?: Partial<Batch>;
 }
 
 interface BatchItemForm {
@@ -20,7 +21,7 @@ interface BatchItemForm {
   unit_cost: number;
 }
 
-export default function BatchModal({ batch, onClose, onSuccess }: BatchModalProps) {
+export default function BatchModal({ batch, onClose, onSuccess, prefillData }: BatchModalProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [products, setProducts] = useState<Product[]>([]);
   const [error, setError] = useState('');
@@ -66,13 +67,18 @@ export default function BatchModal({ batch, onClose, onSuccess }: BatchModalProp
       }));
       setItems(batchItems);
     } else {
-      // Set default date to today
+      // Set default date to today and apply prefillData if any
       setFormData(prev => ({
         ...prev,
         purchase_date: new Date().toISOString().split('T')[0],
+        purchase_total_cost: prefillData?.purchase_total_cost?.toString() || '',
+        shipping_cost: prefillData?.shipping_cost?.toString() || '',
+        customs_fees: prefillData?.customs_fees?.toString() || '',
+        notes: prefillData?.notes || '',
+        batch_number: prefillData?.batch_number || '',
       }));
     }
-  }, [batch]);
+  }, [batch, prefillData]);
 
   const loadProducts = async () => {
     try {

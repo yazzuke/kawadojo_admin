@@ -110,6 +110,14 @@ export const productService = {
     return response.data;
   },
 
+  async batchUpdateProducts(productIds: string[], updates: any): Promise<any> {
+    const response = await api.patch('/products/batch-update', {
+      product_ids: productIds,
+      updates
+    });
+    return response.data;
+  },
+
   async batchTagRemoveProducts(productIds: string[]): Promise<any> {
     const response = await api.patch('/products/batch-tag-remove', {
       product_ids: productIds

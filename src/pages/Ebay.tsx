@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { EbayNavbar } from '../components/EbayNavbar';
+import api from '../services/api';
 import { ShoppingBag, Loader2, ExternalLink } from 'lucide-react';
 
 interface EbayItem {
@@ -73,15 +74,14 @@ export default function EbayPage() {
       }
       setError(null);
       
-      const url = new URL('http://localhost:3000/api/ebay');
-      if (searchTerm) url.searchParams.append('q', searchTerm);
-      if (sellerSearch) url.searchParams.append('seller', sellerSearch);
-      if (sort !== 'newest') url.searchParams.append('sort', sort);
-      if (!isNewSearch) url.searchParams.append('offset', offset.toString());
+      const params: Record<string, string> = {};
+      if (searchTerm) params.q = searchTerm;
+      if (sellerSearch) params.seller = sellerSearch;
+      if (sort !== 'newest') params.sort = sort;
+      if (!isNewSearch) params.offset = offset.toString();
 
-      const response = await fetch(url.toString());
-      if (!response.ok) throw new Error('Error fetching eBay data');
-      const data = await response.json();
+      const response = await api.get('/ebay', { params });
+      const data = response.data;
       
       if (data.length < 48) {
         setHasMore(false); // If we got less than requested limit, we're at the end

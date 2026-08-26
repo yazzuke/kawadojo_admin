@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { EbayNavbar } from '../components/EbayNavbar';
 import api from '../services/api';
 import { ShoppingBag, Loader2, ExternalLink } from 'lucide-react';
+import toast from 'react-hot-toast';
 
 interface EbayItem {
   ebay_item_id: string;
@@ -16,6 +17,7 @@ interface EbayItem {
   image_url: string;
   seller_id: string;
   last_synced_at: string;
+  first_seen_at?: string;
 }
 
 export default function EbayPage() {
@@ -31,9 +33,11 @@ export default function EbayPage() {
   const [salePrices, setSalePrices] = useState<Record<string, string>>({});
   const [trm, setTrm] = useState<number>(4000); // Default TRM
   const [cart, setCart] = useState<EbayItem[]>([]);
+  const [savedSellers, setSavedSellers] = useState<any[]>([]);
+  const [motoModel, setMotoModel] = useState('ninja300'); // New state for model selection
   
   const [interestKeywords, setInterestKeywords] = useState(() => {
-    return localStorage.getItem('kawa_interest_keywords') || 'shock, radiator';
+    return localStorage.getItem('kawa_interest_keywords') || 'shock, radiator, Starter Motor, Regulator Rectifier,Fan, Cooling Fan';
   });
 
   const toggleCart = (item: EbayItem) => {
@@ -53,9 +57,50 @@ export default function EbayPage() {
   }, 0);
   const cartProfitCOP = cartSaleTotalCOP > 0 ? cartSaleTotalCOP - cartTotalCOP : 0;
 
+  const fetchSellers = async () => {
+    try {
+      const res = await api.get('/ebay/sellers');
+      setSavedSellers(res.data);
+    } catch (e) {
+      console.error('Error fetching sellers', e);
+    }
+  };
+
+  const saveSeller = async (username: string) => {
+    try {
+      await api.post('/ebay/sellers', { username });
+      fetchSellers();
+      toast.success(`Vendedor ${username} guardado en tu base de datos!`);
+    } catch (e) {
+      console.error('Error saving seller', e);
+      toast.error('Error guardando vendedor');
+    }
+  };
+
+  const hideItem = async (id: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    try {
+      // Optimizacion: Quitarlo inmediatamente de la UI
+      setItems(prev => prev.filter(item => item.ebay_item_id !== id));
+      toast.success('Repuesto ocultado. No volverá a salir.');
+      
+      // Llamar al backend para guardarlo en BD como oculto
+      await api.post(`/ebay/hide/${id}`);
+    } catch (error) {
+      console.error('Error hiding item', error);
+      toast.error('Error al ocultar el repuesto');
+    }
+  };
+
   useEffect(() => {
     fetchItems(true);
+    fetchSellers();
   }, []); 
+
+  // Re-fetch when model changes
+  useEffect(() => {
+    fetchItems(true);
+  }, [motoModel]);
 
   // Add dependency on offset to load more
   useEffect(() => {
@@ -79,6 +124,7 @@ export default function EbayPage() {
       if (sellerSearch) params.seller = sellerSearch;
       if (sort !== 'newest') params.sort = sort;
       if (!isNewSearch) params.offset = offset.toString();
+      params.model = motoModel; // Pass selected model to backend
 
       const response = await api.get('/ebay', { params });
       const data = response.data;
@@ -127,6 +173,15 @@ export default function EbayPage() {
   const highInterestItems = sortedItems.filter(item => isHighInterest(item.title));
   const otherItems = sortedItems.filter(item => !isHighInterest(item.title));
 
+  const getDaysAgo = (dateString?: string) => {
+    if (!dateString) return 'Hoy';
+    const diffTime = Math.abs(new Date().getTime() - new Date(dateString).getTime());
+    const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+    if (diffDays === 0) return 'Hoy';
+    if (diffDays === 1) return 'Ayer';
+    return `Hace ${diffDays} días`;
+  };
+
   const renderItemCard = (item: any) => {
     const totalCostUSD = item.price + (item.shipping || 0) + (item.price * 0.07);
     const totalCostCOP = totalCostUSD * trm;
@@ -145,6 +200,14 @@ export default function EbayPage() {
           <div className="absolute top-2 right-2 bg-black/80 px-2 py-1 rounded text-xs font-bold text-white border border-gray-700 shadow-lg">
             {item.condition}
           </div>
+
+          <button 
+            onClick={(e) => hideItem(item.ebay_item_id, e)}
+            className="absolute top-10 right-2 bg-red-900/80 hover:bg-red-600 px-2 py-1 rounded text-[10px] font-bold text-white border border-red-700 shadow-lg transition-colors z-10"
+            title="Ocultar para siempre"
+          >
+            ✕ Ocultar
+          </button>
           
           <button 
             onClick={() => toggleCart(item)}
@@ -158,6 +221,9 @@ export default function EbayPage() {
           </button>
         </div>
         <div className="p-4 flex flex-col flex-1">
+          <div className="text-[10px] text-kawa-green mb-1 font-bold tracking-wide uppercase">
+            Apareció: {getDaysAgo(item.first_seen_at)}
+          </div>
           <h3 className="text-white font-medium line-clamp-2 mb-2 leading-tight" title={item.title}>
             {item.title}
           </h3>
@@ -195,8 +261,21 @@ export default function EbayPage() {
             </div>
           </div>
 
-          <div className="text-gray-400 text-xs mb-3">
-            Vendedor: <span className="text-gray-300 font-medium">{item.seller_id}</span>
+          <div className="text-gray-400 text-xs mb-3 flex items-center justify-between">
+            <div>Vendedor: <span className="text-gray-300 font-medium">{item.seller_id}</span></div>
+            {item.seller_id && !savedSellers.find(s => s.username === item.seller_id) && (
+              <button 
+                onClick={() => saveSeller(item.seller_id)}
+                className="text-[10px] bg-gray-800 hover:bg-gray-700 px-2 py-1 rounded text-white border border-gray-600 transition-colors"
+              >
+                + Guardar
+              </button>
+            )}
+            {savedSellers.find(s => s.username === item.seller_id) && (
+              <span className="text-[10px] bg-kawa-green/20 text-kawa-green px-2 py-1 rounded border border-kawa-green/30">
+                Guardado ✓
+              </span>
+            )}
           </div>
           
           <div className="mt-auto space-y-3">
@@ -246,6 +325,9 @@ export default function EbayPage() {
         interestKeywords={interestKeywords}
         onKeywordsChange={handleKeywordsChange}
         onSearch={handleSearchSubmit}
+        savedSellers={savedSellers}
+        motoModel={motoModel}
+        setMotoModel={setMotoModel}
       />
 
       {error && (
@@ -342,11 +424,9 @@ export default function EbayPage() {
                   ⚠️ Supera $200 USD (Aplica Arancel)
                 </div>
               )}
-              <button 
-                className="bg-kawa-green text-black font-bold px-6 py-2 rounded-lg hover:bg-opacity-90 transition-colors"
-              >
-                Convertir a Lote
-              </button>
+              <div className="bg-gray-800 text-gray-300 text-sm px-4 py-2 rounded-lg border border-gray-700">
+                Calculadora de Lote
+              </div>
             </div>
           </div>
         </div>

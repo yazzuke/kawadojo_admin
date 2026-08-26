@@ -13,6 +13,9 @@ interface EbayNavbarProps {
   interestKeywords: string;
   onKeywordsChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
   onSearch: (e: React.FormEvent) => void;
+  savedSellers?: any[];
+  motoModel: string;
+  setMotoModel: (val: string) => void;
 }
 
 export function EbayNavbar({
@@ -26,7 +29,10 @@ export function EbayNavbar({
   setSort,
   interestKeywords,
   onKeywordsChange,
-  onSearch
+  onSearch,
+  savedSellers = [],
+  motoModel,
+  setMotoModel
 }: EbayNavbarProps) {
   return (
     <div className="flex flex-col xl:flex-row xl:justify-between xl:items-end gap-4 w-full bg-[#111] border border-gray-800 p-4 rounded-xl shadow-lg mb-6">
@@ -36,9 +42,19 @@ export function EbayNavbar({
             <ShoppingBag className="text-kawa-green" />
             eBay Listings
           </h1>
-          <p className="text-gray-400 text-sm mt-1">
-            Buscador de repuestos de motos en eBay US
-          </p>
+          <div className="mt-2">
+            <select
+              value={motoModel}
+              onChange={(e) => setMotoModel(e.target.value)}
+              className="bg-black border border-gray-700 text-white px-3 py-1.5 rounded-lg focus:outline-none focus:border-kawa-green text-sm font-bold w-full sm:w-auto"
+            >
+              <option value="ninja300">Kawasaki Ninja 300 / EX300</option>
+              <option value="ninja400">Kawasaki Ninja 400</option>
+              <option value="r3">Yamaha YZF-R3</option>
+              <option value="mt03">Yamaha MT-03</option>
+              <option value="z400">Kawasaki Z400</option>
+            </select>
+          </div>
         </div>
         
         <div className="flex items-center gap-2 bg-black border border-gray-800 p-2 rounded-lg mb-1">
@@ -68,11 +84,17 @@ export function EbayNavbar({
           <User className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
           <input 
             type="text" 
+            list="saved-sellers-list"
             placeholder="Vendedor (Opcional)"
             value={sellerSearch}
             onChange={(e) => setSellerSearch(e.target.value)}
             className="w-full bg-black border border-gray-700 text-white pl-10 pr-4 py-2 rounded-lg focus:outline-none focus:border-kawa-green"
           />
+          <datalist id="saved-sellers-list">
+            {savedSellers.map(s => (
+              <option key={s.id} value={s.username} />
+            ))}
+          </datalist>
         </div>
         
         <div className="flex flex-wrap gap-2">
@@ -103,7 +125,7 @@ export function EbayNavbar({
           value={interestKeywords}
           onChange={onKeywordsChange}
           className="flex-1 bg-black border border-gray-700 rounded-lg px-3 py-1.5 text-white text-sm focus:border-kawa-green focus:outline-none"
-          placeholder="Ej: shock, radiator"
+          placeholder="Ej: shock, radiator, Starter Motor, Regulator Rectifier,Fan, Cooling Fan"
         />
       </div>
     </div>

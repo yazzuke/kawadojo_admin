@@ -309,17 +309,43 @@ const QuotesTab = ({
                         </button>
                       </div>
                     </div>
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <button onClick={() => updateQuantity(item.id, item.quantity - 1)} className="bg-gray-800 w-6 h-6 rounded text-white">-</button>
-                        <span className="text-white w-6 text-center font-bold">{item.quantity}</span>
-                        <button onClick={() => updateQuantity(item.id, item.quantity + 1)} className="bg-gray-800 w-6 h-6 rounded text-white">+</button>
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <button onClick={() => updateQuantity(item.id, item.quantity - 1)} className="bg-gray-800 w-6 h-6 rounded text-white">-</button>
+                          <span className="text-white w-6 text-center font-bold">{item.quantity}</span>
+                          <button onClick={() => updateQuantity(item.id, item.quantity + 1)} className="bg-gray-800 w-6 h-6 rounded text-white">+</button>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-gray-500 text-xs">US$ {item.price_usd?.toFixed(2)} c/u</p>
+                          <p className="text-blue-400 font-bold text-sm">US$ {((item.price_usd || 0) * item.quantity).toFixed(2)}</p>
+                        </div>
                       </div>
-                      <div className="text-right">
-                        <p className="text-gray-500 text-xs">US$ {item.price_usd?.toFixed(2)} c/u</p>
-                        <p className="text-blue-400 font-bold text-sm">US$ {((item.price_usd || 0) * item.quantity).toFixed(2)}</p>
+                      
+                      {/* Detalles en COP y Ganancia */}
+                      <div className="flex flex-col gap-1 border-t border-gray-800 pt-2 mt-1">
+                        <div className="flex justify-between text-xs">
+                          <span className="text-gray-400">Venta Pública (Und):</span>
+                          <span className="text-kawa-green font-mono">${(item.kawadojo_price || 0).toLocaleString('es-CO')}</span>
+                        </div>
+                        {item.quantity > 1 && (
+                          <div className="flex justify-between text-xs">
+                            <span className="text-gray-400">Venta Pública Total (x{item.quantity}):</span>
+                            <span className="text-kawa-green font-bold font-mono">${((item.kawadojo_price || 0) * item.quantity).toLocaleString('es-CO')}</span>
+                          </div>
+                        )}
+                        <div className="flex justify-between text-xs mt-1">
+                          <span className="text-gray-400">Costo Base (Sin flete/imp):</span>
+                          <span className="text-yellow-500 font-mono">${Math.round((item.price_usd || 0) * rateUsdCop).toLocaleString('es-CO')}</span>
+                        </div>
+                        <div className="flex justify-between text-xs font-bold">
+                          <span className="text-gray-300">Utilidad Bruta / Und:</span>
+                          <span className="text-blue-400 font-mono">${((item.kawadojo_price || 0) - Math.round((item.price_usd || 0) * rateUsdCop)).toLocaleString('es-CO')}</span>
+                        </div>
+                        <div className="flex justify-between text-xs font-bold bg-black/50 p-1 rounded mt-1">
+                          <span className="text-gray-300">Utilidad Total (x{item.quantity}):</span>
+                          <span className="text-blue-400 font-mono">${(((item.kawadojo_price || 0) - Math.round((item.price_usd || 0) * rateUsdCop)) * item.quantity).toLocaleString('es-CO')}</span>
+                        </div>
                       </div>
-                    </div>
                   </div>
                 ))}
               </div>

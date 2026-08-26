@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Plus, Package, DollarSign, Eye, Trash2, Edit2, Filter, ShoppingCart, Archive } from 'lucide-react';
+import { Plus, Package, DollarSign, Eye, Trash2, Edit2, Filter, ShoppingCart, Archive, Search } from 'lucide-react';
 import { batchesService } from '../services/batchesService';
 import type { Batch, BatchSummary } from '../types/batch';
 import { BATCH_STATUSES } from '../types/batch';
@@ -17,6 +17,7 @@ export default function BatchesPage({ onOpenBatch }: BatchesPageProps = {}) {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingBatch, setEditingBatch] = useState<Batch | null>(null);
   const [filterStatus, setFilterStatus] = useState<string>('all');
+  const [searchTerm, setSearchTerm] = useState('');
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
 
   useEffect(() => {
@@ -24,12 +25,22 @@ export default function BatchesPage({ onOpenBatch }: BatchesPageProps = {}) {
   }, []);
 
   useEffect(() => {
-    if (filterStatus === 'all') {
-      setFilteredBatches(batches);
-    } else {
-      setFilteredBatches(batches.filter(b => b.status === filterStatus));
+    let result = batches;
+    
+    if (filterStatus !== 'all') {
+      result = result.filter(b => b.status === filterStatus);
     }
-  }, [filterStatus, batches]);
+    
+    if (searchTerm) {
+      const lowerCaseSearch = searchTerm.toLowerCase();
+      result = result.filter(b => 
+        b.batch_number.toLowerCase().includes(lowerCaseSearch) ||
+        (b.mailbox_tracking && b.mailbox_tracking.toLowerCase().includes(lowerCaseSearch))
+      );
+    }
+    
+    setFilteredBatches(result);
+  }, [filterStatus, searchTerm, batches]);
 
   const loadBatches = async () => {
     try {
@@ -364,20 +375,35 @@ export default function BatchesPage({ onOpenBatch }: BatchesPageProps = {}) {
 
       {/* Filters */}
       <div className="bg-kawa-gray p-4 rounded-lg shadow-sm border border-gray-800">
-        <div className="flex items-center gap-4">
-          <Filter size={20} className="text-gray-400" />
-          <select
-            value={filterStatus}
-            onChange={(e) => setFilterStatus(e.target.value)}
-            className="px-4 py-2 bg-kawa-black border border-gray-700 rounded-lg text-white focus:ring-2 focus:ring-kawa-green focus:border-transparent"
-          >
-            <option value="all">Todos los estados</option>
-            {BATCH_STATUSES.map(status => (
-              <option key={status.value} value={status.value}>
-                {status.label}
-              </option>
-            ))}
-          </select>
+        <div className="flex flex-col sm:flex-row items-center gap-4 justify-between">
+          <div className="flex items-center gap-4 w-full sm:w-auto">
+            <Filter size={20} className="text-gray-400" />
+            <select
+              value={filterStatus}
+              onChange={(e) => setFilterStatus(e.target.value)}
+              className="px-4 py-2 bg-kawa-black border border-gray-700 rounded-lg text-white focus:ring-2 focus:ring-kawa-green focus:border-transparent w-full sm:w-auto"
+            >
+              <option value="all">Todos los estados</option>
+              {BATCH_STATUSES.map(status => (
+                <option key={status.value} value={status.value}>
+                  {status.label}
+                </option>
+              ))}
+            </select>
+          </div>
+          
+          <div className="relative w-full sm:w-64">
+            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+              <Search size={18} className="text-gray-400" />
+            </div>
+            <input
+              type="text"
+              placeholder="Buscar lote o tracking..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full pl-10 pr-4 py-2 bg-kawa-black border border-gray-700 rounded-lg text-white focus:ring-2 focus:ring-kawa-green focus:border-transparent"
+            />
+          </div>
         </div>
       </div>
 

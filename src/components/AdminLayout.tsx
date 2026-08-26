@@ -12,9 +12,8 @@ import {
   ShoppingBag,
   TrendingUp,
   MessageSquare,
-  ReceiptJapaneseYen
-  
-
+  ReceiptJapaneseYen,
+  BookOpen
 } from 'lucide-react';
 import { useState } from 'react';
 
@@ -30,6 +29,7 @@ const navItems = [
   { to: '/users', icon: LayoutDashboard, label: 'Usuarios' },
   { to: '/impex', icon: ReceiptJapaneseYen, label: 'Impex' },
   { to: '/ebay', icon: ShoppingBag, label: 'eBay' },
+  { to: '/oem', icon: BookOpen, label: 'Catálogo OEM' },
   { to: '/resale-pricing', icon: Package, label: 'Precios Lista' },
 ];
 

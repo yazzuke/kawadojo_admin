@@ -1,7 +1,9 @@
-﻿import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import type { User, UsersResponse } from '../types/users';
 import { userService } from '../services/userService';
 import UserOrdersModal from '../components/UserOrdersModal';
+import CreateUserModal from '../components/CreateUserModal';
+import CreateOrderModal from '../components/CreateOrderModal';
 
 const Users: React.FC = () => {
   const [users, setUsers] = useState<User[]>([]);
@@ -11,6 +13,9 @@ const Users: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
+  
+  const [showCreateUser, setShowCreateUser] = useState(false);
+  const [orderUser, setOrderUser] = useState<User | null>(null);
 
   useEffect(() => {
     // Si buscamos, lo ideal es siempre volver a la página 1.
@@ -67,9 +72,17 @@ const Users: React.FC = () => {
   return (
     <div className="p-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
-        <h1 className="text-2xl font-bold text-white">
-          Usuarios {pagination ? `(${pagination.total} en total)` : ''}
-        </h1>
+        <div className="flex items-center gap-4">
+          <h1 className="text-2xl font-bold text-white">
+            Usuarios {pagination ? `(${pagination.total} en total)` : ''}
+          </h1>
+          <button 
+            onClick={() => setShowCreateUser(true)}
+            className="bg-kawa-green text-black font-bold py-1.5 px-3 text-sm rounded-lg hover:bg-green-500 transition-colors"
+          >
+            + Nuevo Cliente
+          </button>
+        </div>
         
         {/* Barra de búsqueda */}
         <div className="relative w-full sm:w-64">
@@ -117,16 +130,22 @@ const Users: React.FC = () => {
                     </span>
                   </td>
                   <td className="p-4">
-                    <div className="flex items-center gap-3">
-                      <div className="text-sm text-gray-400">{user._count?.orders ?? 0}</div>
+                    <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2">
+                      <div className="text-sm text-gray-400 mr-2">{user._count?.orders ?? 0}</div>
                       {(user.orders && user.orders.length > 0) && (
                         <button
                           onClick={() => setSelectedUser(user)}
                           className="text-kawa-green hover:text-green-400 text-xs font-medium border border-kawa-green/30 bg-kawa-green/10 px-2 py-1 rounded transition-colors"
                         >
-                          Ver detalle
+                          Ver historial
                         </button>
                       )}
+                      <button
+                        onClick={() => setOrderUser(user)}
+                        className="text-white hover:text-black hover:bg-kawa-green text-xs font-medium border border-gray-600 bg-gray-800 px-2 py-1 rounded transition-colors"
+                      >
+                        🛒 Crear Orden Manual
+                      </button>
                     </div>
                   </td>
                   <td className="p-4">
@@ -187,6 +206,24 @@ const Users: React.FC = () => {
         isOpen={selectedUser !== null}
         onClose={() => setSelectedUser(null)}
         user={selectedUser}
+      />
+
+      <CreateUserModal
+        isOpen={showCreateUser}
+        onClose={() => setShowCreateUser(false)}
+        onSuccess={(newUser) => {
+          fetchUsers(1, '');
+          setOrderUser(newUser); // Al crear, abrirle de una vez para crear orden
+        }}
+      />
+
+      <CreateOrderModal
+        isOpen={orderUser !== null}
+        onClose={() => setOrderUser(null)}
+        user={orderUser}
+        onSuccess={() => {
+          fetchUsers(currentPage, searchTerm); // Refresh table counts
+        }}
       />
     </div>
   );

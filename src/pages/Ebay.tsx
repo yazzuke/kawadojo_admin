@@ -126,8 +126,22 @@ export default function EbayPage() {
       if (!isNewSearch) params.offset = offset.toString();
       params.model = motoModel; // Pass selected model to backend
 
-      const response = await api.get('/ebay', { params });
-      const data = response.data;
+      // Generic query
+      const reqs = [api.get('/ebay', { params })];
+
+      // If new search and NO explicit search term, fetch priority items specifically
+      if (isNewSearch && !searchTerm && !sellerSearch) {
+        const kwds = interestKeywords.split(',').map(k => k.trim()).filter(k => k.length > 0);
+        if (kwds.length > 0) {
+          // Format as (shock,radiator,"starter motor")
+          const priorityQ = `(${kwds.map(k => k.includes(' ') ? '"' + k + '"' : k).join(',')})`;
+          reqs.push(api.get('/ebay', { params: { ...params, q: priorityQ, offset: '0' } }));
+        }
+      }
+
+      const responses = await Promise.all(reqs);
+      const data = responses[0].data;
+      const priorityData = responses.length > 1 ? responses[1].data : [];
       
       if (data.length < 48) {
         setHasMore(false); // If we got less than requested limit, we're at the end
@@ -136,9 +150,15 @@ export default function EbayPage() {
       }
 
       if (isNewSearch) {
-        setItems(data);
+        // Combinar y deduplicar por ID
+        const combined = [...priorityData, ...data];
+        const deduplicated = combined.filter((v, i, a) => a.findIndex(t => (t.ebay_item_id === v.ebay_item_id)) === i);
+        setItems(deduplicated);
       } else {
-        setItems(prev => [...prev, ...data]);
+        setItems(prev => {
+          const combined = [...prev, ...data];
+          return combined.filter((v, i, a) => a.findIndex(t => (t.ebay_item_id === v.ebay_item_id)) === i);
+        });
       }
     } catch (err: any) {
       setError(err.message || 'Error loading items');

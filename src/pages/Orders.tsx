@@ -32,6 +32,7 @@ export default function OrdersPage() {
   useEffect(() => {
     applyFilters();
   }, [filters, orders, searchTerm]);
+  
 
   const loadData = async () => {
     try {
@@ -225,6 +226,21 @@ export default function OrdersPage() {
 
       {/* Filters */}
       <div className="bg-kawa-gray p-4 rounded-lg shadow-sm border border-gray-800">
+        <div className="flex flex-wrap items-center gap-4">
+          <Filter size={20} className="text-gray-400" />
+          
+          <select
+            value={filters.status || ''}
+            onChange={(e) => setFilters({ ...filters, status: e.target.value || undefined })}
+            className="px-4 py-2 bg-kawa-black border border-gray-700 rounded-lg text-white focus:ring-2 focus:ring-kawa-green focus:border-transparent"
+          >
+            <option value="">Todos los estados</option>
+            {ORDER_STATUSES.map((status) => (
+              <option key={status.value} value={status.value}>
+                {status.label}
+              </option>
+            ))}
+          </select>
         <div className="flex flex-col lg:flex-row items-center gap-4 justify-between">
           <div className="flex flex-wrap items-center gap-4 w-full lg:w-auto">
             <Filter size={20} className="text-gray-400 hidden sm:block" />
@@ -242,6 +258,18 @@ export default function OrdersPage() {
               ))}
             </select>
 
+          <select
+            value={filters.payment_method || ''}
+            onChange={(e) => setFilters({ ...filters, payment_method: e.target.value || undefined })}
+            className="px-4 py-2 bg-kawa-black border border-gray-700 rounded-lg text-white focus:ring-2 focus:ring-kawa-green focus:border-transparent"
+          >
+            <option value="">Todos los métodos de pago</option>
+            {PAYMENT_METHODS.map((method) => (
+              <option key={method.value} value={method.value}>
+                {method.label}
+              </option>
+            ))}
+          </select>
             <select
               value={filters.payment_method || ''}
               onChange={(e) => setFilters({ ...filters, payment_method: e.target.value || undefined })}
@@ -255,6 +283,14 @@ export default function OrdersPage() {
               ))}
             </select>
 
+          {(filters.status || filters.payment_method) && (
+            <button
+              onClick={() => setFilters({})}
+              className="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition-colors"
+            >
+              Limpiar filtros
+            </button>
+          )}
             {(filters.status || filters.payment_method) && (
               <button
                 onClick={() => setFilters({})}
@@ -381,5 +417,6 @@ export default function OrdersPage() {
         )}
       </div>
     </div>
+      </div>
   );
 }

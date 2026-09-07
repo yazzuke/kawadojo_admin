@@ -18,6 +18,7 @@ interface EbayItem {
   seller_id: string;
   last_synced_at: string;
   first_seen_at?: string;
+  item_creation_date?: string;
 }
 
 export default function EbayPage() {
@@ -195,9 +196,9 @@ export default function EbayPage() {
     if (sort === "priceAsc") return a.price - b.price;
     if (sort === "priceDesc") return b.price - a.price;
     
-    // Default 'newest' should sort strictly by first_seen_at so priority merges don't scramble dates
-    const dateA = new Date(a.first_seen_at || Date.now()).getTime();
-    const dateB = new Date(b.first_seen_at || Date.now()).getTime();
+    // Default 'newest' should sort by real eBay creation date (if available), then fallback to first_seen_at
+    const dateA = new Date(a.item_creation_date || a.first_seen_at || Date.now()).getTime();
+    const dateB = new Date(b.item_creation_date || b.first_seen_at || Date.now()).getTime();
     return dateB - dateA;
   });
 
@@ -274,10 +275,10 @@ export default function EbayPage() {
             <ShoppingBag size={16} />
           </button>
         </div>
-        <div className="p-4 flex flex-col flex-1">
-          <div className="text-[10px] text-kawa-green mb-1 font-bold tracking-wide uppercase">
-            Apareció: {getDaysAgo(item.first_seen_at)}
-          </div>
+          <div className="p-4 flex flex-col flex-1">
+            <div className="text-[10px] text-kawa-green mb-1 font-bold tracking-wide uppercase">
+              Apareció: {getDaysAgo(item.item_creation_date || item.first_seen_at)}
+            </div>
           <h3 className="text-white font-medium line-clamp-2 mb-2 leading-tight" title={item.title}>
             {item.title}
           </h3>

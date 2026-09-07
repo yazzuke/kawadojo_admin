@@ -444,6 +444,18 @@ export default function BatchInfoPage({ batchId, onBack, onDeleted }: BatchInfoP
                     }`}>
                       {item.product.is_incoming ? 'En Camino' : (item.product.in_stock ? 'Disponible' : 'Vendido')}
                     </span>
+                    {!item.product.is_incoming && !item.product.in_stock && item.product.order_items && item.product.order_items.length > 0 && (
+                      <a
+                        href={`/orders/${item.product.order_items[0].order.id}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="px-2 py-1 text-xs font-semibold rounded bg-blue-900 bg-opacity-50 text-blue-400 border border-blue-700 hover:bg-blue-800 transition-colors flex items-center gap-1 cursor-pointer"
+                        title="Ver Orden"
+                      >
+                        {item.product.order_items[0].order.order_number}
+                        <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg>
+                      </a>
+                    )}
                   </div>
                   <p className="text-sm text-gray-400 mt-1">
                     Cantidad: {item.quantity} unidades

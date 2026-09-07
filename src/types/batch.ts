@@ -18,6 +18,12 @@ export interface Product {
     name: string;
     slug: string;
   };
+  order_items?: Array<{
+    order: {
+      id: string;
+      order_number: string;
+    };
+  }>;
 }
 
 export interface BatchItem {

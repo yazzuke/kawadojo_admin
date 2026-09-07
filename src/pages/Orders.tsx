@@ -31,6 +31,7 @@ export default function OrdersPage() {
 
   useEffect(() => {
     applyFilters();
+  }, [filters, orders]);
   }, [filters, orders, searchTerm]);
   
 

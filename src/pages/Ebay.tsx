@@ -35,10 +35,28 @@ export default function EbayPage() {
   const [cart, setCart] = useState<EbayItem[]>([]);
   const [savedSellers, setSavedSellers] = useState<any[]>([]);
   const [motoModel, setMotoModel] = useState('ninja300'); // New state for model selection
+  const [watchlist, setWatchlist] = useState<string[]>(() => {
+    try {
+      return JSON.parse(localStorage.getItem('kawa_ebay_watchlist') || '[]');
+    } catch {
+      return [];
+    }
+  });
   
   const [interestKeywords, setInterestKeywords] = useState(() => {
     return localStorage.getItem('kawa_interest_keywords') || 'shock, radiator, Starter Motor, Regulator Rectifier,Fan, Cooling Fan';
   });
+
+  const toggleWatchlist = (id: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setWatchlist(prev => {
+      const isSaved = prev.includes(id);
+      const next = isSaved ? prev.filter(i => i !== id) : [...prev, id];
+      localStorage.setItem('kawa_ebay_watchlist', JSON.stringify(next));
+      if (!isSaved) toast.success('Marcado como Guardado en Watchlist ✓');
+      return next;
+    });
+  };
 
   const toggleCart = (item: EbayItem) => {
     if (cart.find(c => c.ebay_item_id === item.ebay_item_id)) {
@@ -176,7 +194,11 @@ export default function EbayPage() {
   const sortedItems = [...items].sort((a, b) => {
     if (sort === "priceAsc") return a.price - b.price;
     if (sort === "priceDesc") return b.price - a.price;
-    return 0; // 'newest' keeps the original eBay API order (which is newlyListed)
+    
+    // Default 'newest' should sort strictly by first_seen_at so priority merges don't scramble dates
+    const dateA = new Date(a.first_seen_at || Date.now()).getTime();
+    const dateB = new Date(b.first_seen_at || Date.now()).getTime();
+    return dateB - dateA;
   });
 
   const handleKeywordsChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -227,6 +249,18 @@ export default function EbayPage() {
             title="Ocultar para siempre"
           >
             ✕ Ocultar
+          </button>
+
+          <button 
+            onClick={(e) => toggleWatchlist(item.ebay_item_id, e)}
+            className={`absolute top-[4.5rem] right-2 px-2 py-1 rounded text-[10px] font-bold text-white border shadow-lg transition-colors z-10 ${
+              watchlist.includes(item.ebay_item_id)
+                ? 'bg-blue-600 border-blue-500'
+                : 'bg-gray-900/80 hover:bg-blue-600 border-gray-700'
+            }`}
+            title="Marcar como guardado en Watchlist"
+          >
+            {watchlist.includes(item.ebay_item_id) ? '★ Guardado' : '☆ Watchlist'}
           </button>
           
           <button 

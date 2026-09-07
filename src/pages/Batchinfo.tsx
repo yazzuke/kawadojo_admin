@@ -82,6 +82,23 @@ export default function BatchInfoPage({ batchId, onBack, onDeleted }: BatchInfoP
     loadBatch();
   };
 
+  const handleBulkUpdate = async (updates: { in_stock?: boolean; is_incoming?: boolean }) => {
+    if (!batch?.items?.length) return;
+    
+    if (!window.confirm(`¿Estás seguro de marcar todos los ${batch.items.length} productos con este estado?`)) {
+      return;
+    }
+
+    try {
+      const productIds = batch.items.map(item => item.product_id);
+      await productService.batchUpdateProducts(productIds, updates);
+      loadBatch(); // Recargar para ver los cambios
+    } catch (error) {
+      console.error('Error updating products:', error);
+      alert('Hubo un error al actualizar los productos masivamente.');
+    }
+  };
+
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('es-CO', {
       style: 'currency',
@@ -349,6 +366,23 @@ export default function BatchInfoPage({ batchId, onBack, onDeleted }: BatchInfoP
       <div className="bg-kawa-gray p-6 rounded-lg border border-gray-800">
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-xl font-semibold text-white">Productos en el Lote</h3>
+          <div className="flex items-center gap-4">
+            <h3 className="text-xl font-semibold text-white">Productos en el Lote</h3>
+            <div className="flex gap-2">
+              <button
+                onClick={() => handleBulkUpdate({ is_incoming: true, in_stock: false })}
+                className="px-3 py-1.5 text-xs bg-orange-600/20 text-orange-500 border border-orange-600/50 hover:bg-orange-600 hover:text-white rounded transition-colors flex items-center gap-1"
+              >
+                <Package size={14} /> Todo En Camino
+              </button>
+              <button
+                onClick={() => handleBulkUpdate({ is_incoming: false, in_stock: true })}
+                className="px-3 py-1.5 text-xs bg-green-600/20 text-green-500 border border-green-600/50 hover:bg-green-600 hover:text-white rounded transition-colors flex items-center gap-1"
+              >
+                <Package size={14} /> Todo Disponible
+              </button>
+            </div>
+          </div>
           <div className="flex gap-2">
             <button
               onClick={() => setStockFilter('all')}

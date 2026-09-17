@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
-import { ArrowLeft, Edit2, Trash2, Package } from 'lucide-react';
+import { ArrowLeft, Edit2, Trash2, Package, Copy } from 'lucide-react';
+import { toast } from 'react-hot-toast';
 import { batchesService } from '../services/batchesService';
 import { productService } from '../services/productService';
 import type { BatchWithMetrics } from '../types/batch';
@@ -130,6 +131,28 @@ export default function BatchInfoPage({ batchId, onBack, onDeleted }: BatchInfoP
       default:
         return batch.items;
     }
+  };
+
+  const handleCopyNameAndPrice = (item: any) => {
+    const price = item.metrics?.selling_price || item.product.price || 0;
+    const text = `${item.product.name}\t${price}`;
+    navigator.clipboard.writeText(text);
+    toast.success('Copiado al portapapeles');
+  };
+
+  const handleCopyAll = () => {
+    const itemsToCopy = getFilteredItems();
+    if (itemsToCopy.length === 0) {
+      toast.error('No hay productos para copiar');
+      return;
+    }
+    const text = itemsToCopy.map(item => {
+      const price = item.metrics?.selling_price || item.product.price || 0;
+      return `${item.product.name}\t${price}`;
+    }).join('\n');
+    
+    navigator.clipboard.writeText(text);
+    toast.success(`Copiados ${itemsToCopy.length} productos al portapapeles`);
   };
 
   const soldCount = batch?.items.filter(item => !item.product.in_stock && !item.product.is_incoming).length || 0;
@@ -365,7 +388,6 @@ export default function BatchInfoPage({ batchId, onBack, onDeleted }: BatchInfoP
       {/* Products */}
       <div className="bg-kawa-gray p-6 rounded-lg border border-gray-800">
         <div className="flex items-center justify-between mb-4">
-          <h3 className="text-xl font-semibold text-white">Productos en el Lote</h3>
           <div className="flex items-center gap-4">
             <h3 className="text-xl font-semibold text-white">Productos en el Lote</h3>
             <div className="flex gap-2">
@@ -380,6 +402,12 @@ export default function BatchInfoPage({ batchId, onBack, onDeleted }: BatchInfoP
                 className="px-3 py-1.5 text-xs bg-green-600/20 text-green-500 border border-green-600/50 hover:bg-green-600 hover:text-white rounded transition-colors flex items-center gap-1"
               >
                 <Package size={14} /> Todo Disponible
+              </button>
+              <button
+                onClick={handleCopyAll}
+                className="px-3 py-1.5 text-xs bg-blue-600/20 text-blue-400 border border-blue-600/50 hover:bg-blue-600 hover:text-white rounded transition-colors flex items-center gap-1"
+              >
+                <Copy size={14} /> Copiar Lista para Excel
               </button>
             </div>
           </div>
@@ -434,7 +462,16 @@ export default function BatchInfoPage({ batchId, onBack, onDeleted }: BatchInfoP
                 )}
                 <div className="flex-1">
                   <div className="flex items-center gap-3">
-                    <p className="font-medium text-white">{item.product.name}</p>
+                    <div className="flex items-center gap-2 group">
+                      <p className="font-medium text-white">{item.product.name}</p>
+                      <button
+                        onClick={() => handleCopyNameAndPrice(item)}
+                        className="text-gray-400 hover:text-kawa-green transition-all"
+                        title="Copiar nombre y precio"
+                      >
+                        <Copy size={14} />
+                      </button>
+                    </div>
                     <span className={`px-2 py-1 text-xs font-semibold rounded ${
                       item.product.is_incoming
                         ? 'bg-orange-900 bg-opacity-50 text-orange-400 border border-orange-700'

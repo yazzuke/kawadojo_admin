@@ -409,7 +409,8 @@ export default function BatchesPage({ onOpenBatch }: BatchesPageProps = {}) {
 
       {/* Batches Table */}
       <div className="bg-kawa-gray rounded-lg shadow-sm border border-gray-800 overflow-hidden">
-        <table className="min-w-full divide-y divide-gray-800">
+        <div className="overflow-x-auto">
+          <table className="min-w-full divide-y divide-gray-800">
           <thead className="bg-kawa-black">
             <tr>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -508,6 +509,7 @@ export default function BatchesPage({ onOpenBatch }: BatchesPageProps = {}) {
             })}
           </tbody>
         </table>
+        </div>
 
         {filteredBatches.length === 0 && (
           <div className="text-center py-12">

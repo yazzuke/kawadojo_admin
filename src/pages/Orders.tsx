@@ -11,10 +11,15 @@ import {
   CheckCircle,
   XCircle,
   Search,
+  Plus,
 } from 'lucide-react';
 import { orderService } from '../services/orderService';
 import type { Order, SalesMetrics, OrderFilters } from '../types/order';
 import { ORDER_STATUSES, PAYMENT_METHODS } from '../types/order';
+import type { User } from '../types/users';
+import SelectUserModal from '../components/SelectUserModal';
+import CreateUserModal from '../components/CreateUserModal';
+import CreateOrderModal from '../components/CreateOrderModal';
 
 export default function OrdersPage() {
   const navigate = useNavigate();
@@ -24,6 +29,11 @@ export default function OrdersPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [filters, setFilters] = useState<OrderFilters>({});
   const [searchTerm, setSearchTerm] = useState('');
+
+  // Modals state
+  const [showSelectUser, setShowSelectUser] = useState(false);
+  const [showCreateUser, setShowCreateUser] = useState(false);
+  const [orderUser, setOrderUser] = useState<User | null>(null);
 
   useEffect(() => {
     loadData();
@@ -114,11 +124,18 @@ export default function OrdersPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex justify-between items-center">
+      <div className="flex justify-between items-center flex-wrap gap-4">
         <div>
           <h1 className="text-3xl font-bold text-white">Gestión de Órdenes</h1>
           <p className="text-gray-400 mt-1">Administra todas las órdenes y métricas de ventas</p>
         </div>
+        <button
+          onClick={() => setShowSelectUser(true)}
+          className="bg-kawa-green text-black font-bold py-2 px-4 rounded-lg hover:bg-green-500 transition-colors flex items-center gap-2"
+        >
+          <Plus size={20} />
+          Nueva Orden
+        </button>
       </div>
 
       {/* Metrics Overview */}
@@ -416,7 +433,34 @@ export default function OrdersPage() {
           </div>
         )}
       </div>
+
+      <SelectUserModal
+        isOpen={showSelectUser}
+        onClose={() => setShowSelectUser(false)}
+        onSelectUser={(user) => {
+          setOrderUser(user);
+        }}
+        onCreateNew={() => {
+          setShowCreateUser(true);
+        }}
+      />
+
+      <CreateUserModal
+        isOpen={showCreateUser}
+        onClose={() => setShowCreateUser(false)}
+        onSuccess={(newUser) => {
+          setOrderUser(newUser); // Open create order directly with new user
+        }}
+      />
+
+      <CreateOrderModal
+        isOpen={orderUser !== null}
+        onClose={() => setOrderUser(null)}
+        user={orderUser}
+        onSuccess={() => {
+          loadData(); // Refresh orders list
+        }}
+      />
     </div>
-      </div>
   );
 }

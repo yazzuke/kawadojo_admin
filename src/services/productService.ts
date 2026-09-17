@@ -62,7 +62,7 @@ export const productService = {
     
     if (data.name) formData.append('name', data.name);
     if (data.slug) formData.append('slug', data.slug);
-    if (data.price) formData.append('price', data.price.toString());
+    if (data.price !== undefined) formData.append('price', data.price.toString());
     if (data.cost !== undefined) formData.append('cost', data.cost.toString());
     if (data.description) formData.append('description', data.description);
     if (data.condition) formData.append('condition', data.condition);

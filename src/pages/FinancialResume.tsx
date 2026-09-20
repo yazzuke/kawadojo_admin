@@ -1,4 +1,5 @@
-import { useEffect, useState } from "react";
+import ReactECharts from "echarts-for-react";
+import React, { useState, useEffect, useMemo } from "react";
 import {
   DollarSign,
   TrendingUp,
@@ -622,7 +623,7 @@ function OverviewTab({
                 </span>
               </div>
               <div className="flex justify-between text-sm">
-                <span className="text-gray-400">Ganancia Real - Egresos:</span>
+                <span className="text-gray-400">Ganancia Potencial Neta:</span>
                 <span
                   className={`font-medium ${summary.investment.total_potential_profit_net >= 0 ? "text-green-400" : "text-red-400"}`}
                 >
@@ -630,20 +631,13 @@ function OverviewTab({
                     summary.investment.total_potential_profit_net,
                   )}
                 </span>
-                
               </div>
               <div className="flex justify-between text-sm">
-                <span className="text-gray-400">ROI Neto:</span>
+                <span className="text-gray-400">ROI Potencial Neto:</span>
                 <span className={`font-medium text-green-400`}>
                   {formatPercent(summary.investment.net_roi)}
                 </span>
               </div>
-                 <div className="flex justify-between">
-                    <span className="text-gray-400">Ganancia Real - Egresos - Retiros:</span>
-                    <span className={`font-bold ${(summary.investment.total_potential_profit_net - totalWithdrawn) >= 0 ? "text-green-400" : "text-red-400"}`}>
-                      {formatCurrency(summary.investment.total_potential_profit_net - totalWithdrawn)}
-                    </span>
-                  </div><div className=""></div>
             </div>
           </div>
         </div>
@@ -701,7 +695,7 @@ function OverviewTab({
                   {formatCurrency(summary.profitability.net_profit)}
                 </span>
               </div>
-              <div className="flex justify-between">
+              <div className="flex justify-between text-sm">
                 <span className="text-gray-400">Margen Neto:</span>
                 <span
                   className={`font-bold ${parseFloat(summary.profitability.net_margin) >= 0 ? "text-green-400" : "text-red-400"}`}
@@ -709,14 +703,28 @@ function OverviewTab({
                   {formatPercent(summary.profitability.net_margin)}
                 </span>
               </div>
-              
-               
-              <div className="flex justify-between">
+              <div className="flex justify-between text-sm">
                 <span className="text-gray-400">ROI:</span>
                 <span
                   className={`font-bold ${parseFloat(summary.profitability.roi) >= 0 ? "text-green-400" : "text-red-400"}`}
                 >
                   {formatPercent(summary.profitability.roi)}
+                </span>
+              </div>
+            </div>
+            <div className="pt-3 border-t border-gray-700 space-y-2">
+              <div className="flex justify-between text-sm">
+                <span className="text-gray-400">Retiro de Ganancias:</span>
+                <span className="text-red-400">
+                  -{formatCurrency(totalWithdrawn)}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-white font-semibold">Caja Disponible:</span>
+                <span
+                  className={`text-xl font-bold ${(summary.profitability.net_profit - totalWithdrawn) >= 0 ? "text-kawa-green" : "text-red-400"}`}
+                >
+                  {formatCurrency(summary.profitability.net_profit - totalWithdrawn)}
                 </span>
               </div>
             </div>
@@ -898,6 +906,43 @@ function ByTagMetricsTab({
                 </div>
               </div>
 
+              <div className="p-4 bg-kawa-black/20 border-b border-gray-800">
+                {(() => {
+                  const dateMap = group.sales.reduce((acc, sale) => {
+                    const date = new Date(sale.sold_at).toLocaleDateString('es-CO');
+                    if (!acc[date]) acc[date] = 0;
+                    acc[date] += sale.quantity;
+                    return acc;
+                  }, {} as Record<string, number>);
+                  const sortedDates = Object.keys(dateMap).sort((a, b) => {
+                    const [d1, m1, y1] = a.split('/');
+                    const [d2, m2, y2] = b.split('/');
+                    return new Date(Number(y1), Number(m1)-1, Number(d1)).getTime() - new Date(Number(y2), Number(m2)-1, Number(d2)).getTime();
+                  });
+                  const quantities = sortedDates.map(date => dateMap[date]);
+                  
+                  return (
+                    <ReactECharts 
+                      option={{
+                        tooltip: { trigger: 'axis' },
+                        grid: { left: '3%', right: '4%', bottom: '3%', top: '10%', containLabel: true },
+                        xAxis: { type: 'category', data: sortedDates, axisLabel: { color: '#999' } },
+                        yAxis: { type: 'value', minInterval: 1, axisLabel: { color: '#999' }, splitLine: { lineStyle: { color: '#333' } } },
+                        series: [{
+                          name: 'Unidades Vendidas',
+                          type: 'line',
+                          smooth: true,
+                          areaStyle: { opacity: 0.1 },
+                          itemStyle: { color: '#4ade80' },
+                          data: quantities
+                        }]
+                      }}
+                      style={{ height: '200px', width: '100%' }} 
+                    />
+                  );
+                })()}
+              </div>
+
               <div className="overflow-x-auto">
                 <table className="min-w-full">
                   <thead>
@@ -1000,8 +1045,25 @@ function MonthlyTab({
     (m) => m.revenue > 0 || m.outflows.total > 0 || m.investment.total > 0,
   );
 
+  const chartOption = {
+    tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
+    legend: { data: ['Ingresos', 'Ganancia Neta', 'Egresos'], textStyle: { color: '#ccc' } },
+    grid: { left: '3%', right: '4%', bottom: '3%', containLabel: true },
+    xAxis: { type: 'category', data: activeMonths.map(m => m.month), axisLabel: { color: '#999' } },
+    yAxis: { type: 'value', axisLabel: { color: '#999' }, splitLine: { lineStyle: { color: '#333' } } },
+    series: [
+      { name: 'Ingresos', type: 'bar', data: activeMonths.map(m => m.revenue), itemStyle: { color: '#4ade80' } },
+      { name: 'Ganancia Neta', type: 'line', data: activeMonths.map(m => m.net_profit), itemStyle: { color: '#60a5fa' } },
+      { name: 'Egresos', type: 'bar', data: activeMonths.map(m => m.outflows.total), itemStyle: { color: '#f87171' } }
+    ]
+  };
+
   return (
     <div className="space-y-6">
+      <div className="bg-kawa-gray p-4 rounded-lg border border-gray-800">
+        <ReactECharts option={chartOption} style={{ height: '350px', width: '100%' }} theme="dark" opts={{ renderer: 'svg' }} />
+      </div>
+
       {/* Annual Totals */}
       <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
         <div className="bg-green-900/30 p-4 rounded-lg border border-green-800">

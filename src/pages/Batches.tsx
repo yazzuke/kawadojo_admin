@@ -219,12 +219,12 @@ export default function BatchesPage({ onOpenBatch }: BatchesPageProps = {}) {
                     <span className="text-white text-sm">ROI Bruto:</span>
                     <span className="text-kawa-green font-bold">{summary.potential.average_roi}</span>
                   </div>
-                  <div className="flex justify-between pt-1 border-t border-gray-700">
-                    <span className="text-white text-sm">Ganancia Neta:</span>
-                    <span className={`font-medium ${summary.potential.total_potential_profit_net >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                      {formatCurrency(summary.potential.total_potential_profit_net)}
-                    </span>
-                  </div>
+                    <div className="flex justify-between pt-1 border-t border-gray-700">
+                      <span className="text-white text-sm">Ganancia Neta Potencial:</span>
+                      <span className={`font-medium ${summary.potential.total_potential_profit_net >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                        {formatCurrency(summary.potential.total_potential_profit_net)}
+                      </span>
+                    </div>
                   <div className="flex justify-between">
                     <span className="text-white text-sm">ROI Neto:</span>
                     <span className={`font-bold ${parseFloat(summary.potential.net_roi) >= 0 ? 'text-green-400' : 'text-red-400'}`}>

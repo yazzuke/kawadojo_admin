@@ -1,5 +1,5 @@
 import ReactECharts from "echarts-for-react";
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect } from "react";
 import {
   DollarSign,
   TrendingUp,

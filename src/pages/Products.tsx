@@ -1,12 +1,14 @@
 import { useEffect, useState } from 'react';
 import { Plus, Pencil, Trash2, Search, X, Copy } from 'lucide-react';
 import { productService } from '../services/productService';
-import type { Product } from '../types/product';
+import { categoryService } from '../services/categoryService';
+import type { Product, Category } from '../types/product';
 import ProductModal from '../components/ProductModal';
 
 export default function ProductsPage() {
   const [products, setProducts] = useState<Product[]>([]);
   const [filteredProducts, setFilteredProducts] = useState<Product[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [availableTags, setAvailableTags] = useState<string[]>([]);
@@ -16,6 +18,8 @@ export default function ProductsPage() {
   const [isTagging, setIsTagging] = useState(false);
   const [stockFilter, setStockFilter] = useState<'all' | 'in_stock' | 'sold_out'>('all');
   const [tagFilter, setTagFilter] = useState<string>('all');
+  const [oemFilter, setOemFilter] = useState<string>('all');
+  const [availableOems, setAvailableOems] = useState<string[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [duplicateData, setDuplicateData] = useState<Partial<Product> | undefined>(undefined);
@@ -28,14 +32,18 @@ export default function ProductsPage() {
     cost: '',
     condition: 'usado' as 'nuevo' | 'usado',
     in_stock: true,
-    is_incoming: false
+    is_incoming: false,
+    category_id: '',
+    oem_code: ''
   });
   const [batchEditFlags, setBatchEditFlags] = useState({
     price: false,
     cost: false,
     condition: false,
     in_stock: false,
-    is_incoming: false
+    is_incoming: false,
+    category_id: false,
+    oem_code: false
   });
 
   useEffect(() => {
@@ -47,6 +55,7 @@ export default function ProductsPage() {
       const searchLower = searchTerm.toLowerCase();
       const matchesSearch =
         (product.name?.toLowerCase() || '').includes(searchLower) ||
+        (product.oem_code?.toLowerCase() || '').includes(searchLower) ||
         (product.category_name?.toLowerCase() || '').includes(searchLower);
       const matchesStock =
         stockFilter === 'all' ||
@@ -57,21 +66,33 @@ export default function ProductsPage() {
         tagFilter === 'all' ||
         (tagFilter === 'untagged' && !product.group_tag) ||
         (tagFilter === product.group_tag);
+
+      const matchesOem =
+        oemFilter === 'all' ||
+        (oemFilter === 'with_oem' && Boolean(product.oem_code)) ||
+        (oemFilter === 'without_oem' && !product.oem_code) ||
+        (product.oem_code === oemFilter);
         
-      return matchesSearch && matchesStock && matchesTag;
+      return matchesSearch && matchesStock && matchesTag && matchesOem;
     });
     setFilteredProducts(filtered);
-  }, [searchTerm, stockFilter, tagFilter, products]);
+  }, [searchTerm, stockFilter, tagFilter, oemFilter, products]);
 
   const loadProducts = async () => {
     try {
-      const data = await productService.getAll();
-            const tagsData = await productService.getTags();
+      const [data, tagsData, catsData] = await Promise.all([
+        productService.getAll(),
+        productService.getTags(),
+        categoryService.getAll(),
+      ]);
       setAvailableTags(tagsData);
+      const oems = Array.from(new Set(data.map(p => p.oem_code).filter(Boolean) as string[])).sort();
+      setAvailableOems(oems);
       setProducts(data);
       setFilteredProducts(data);
+      setCategories(catsData);
     } catch (error) {
-      console.error('Error loading products:', error);
+      console.error('Error loading products or categories:', error);
     } finally {
       setIsLoading(false);
     }
@@ -164,6 +185,8 @@ export default function ProductsPage() {
     if (batchEditFlags.condition) updates.condition = batchEditData.condition;
     if (batchEditFlags.in_stock) updates.in_stock = batchEditData.in_stock;
     if (batchEditFlags.is_incoming) updates.is_incoming = batchEditData.is_incoming;
+    if (batchEditFlags.category_id && batchEditData.category_id) updates.category_id = batchEditData.category_id;
+    if (batchEditFlags.oem_code) updates.oem_code = batchEditData.oem_code.trim();
 
     if (Object.keys(updates).length === 0) {
       alert('Selecciona al menos un campo para actualizar');
@@ -176,8 +199,8 @@ export default function ProductsPage() {
       await loadProducts();
       setSelectedIds([]);
       setIsBatchEditModalOpen(false);
-      setBatchEditFlags({ price: false, cost: false, condition: false, in_stock: false, is_incoming: false });
-      setBatchEditData({ price: '', cost: '', condition: 'usado', in_stock: true, is_incoming: false });
+      setBatchEditFlags({ price: false, cost: false, condition: false, in_stock: false, is_incoming: false, category_id: false, oem_code: false });
+      setBatchEditData({ price: '', cost: '', condition: 'usado', in_stock: true, is_incoming: false, category_id: '', oem_code: '' });
     } catch (error) {
       console.error('Error en edición masiva:', error);
       alert('Hubo un error al actualizar los productos');
@@ -266,7 +289,8 @@ export default function ProductsPage() {
             className="w-full pl-12 pr-4 py-3 bg-kawa-gray border border-gray-800 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-kawa-green transition-colors"
           />
         </div>
-                        <div className="flex items-center gap-1 bg-kawa-gray border border-gray-800 rounded-lg p-1">
+        {/* Filtro por Tags */}
+        <div className="flex items-center gap-1 bg-kawa-gray border border-gray-800 rounded-lg p-1">
           <select 
             value={tagFilter} 
             onChange={(e) => setTagFilter(e.target.value)}
@@ -277,6 +301,26 @@ export default function ProductsPage() {
             {availableTags.map(tag => (
               <option key={tag} value={tag} className="bg-kawa-gray">{tag}</option>
             ))}
+          </select>
+        </div>
+
+        {/* Filtro por Código OEM */}
+        <div className="flex items-center gap-1 bg-kawa-gray border border-gray-800 rounded-lg p-1">
+          <select 
+            value={oemFilter} 
+            onChange={(e) => setOemFilter(e.target.value)}
+            className="bg-transparent text-gray-400 hover:text-white px-3 py-2 text-sm font-medium focus:outline-none cursor-pointer appearance-none"
+          >
+            <option value="all" className="bg-kawa-gray">Todos los OEM ({products.length})</option>
+            <option value="with_oem" className="bg-kawa-gray">Con Código OEM ({products.filter(p => p.oem_code).length})</option>
+            <option value="without_oem" className="bg-kawa-gray">Sin Código OEM ({products.filter(p => !p.oem_code).length})</option>
+            {availableOems.length > 0 && (
+              <optgroup label="Códigos OEM" className="bg-kawa-gray">
+                {availableOems.map(oem => (
+                  <option key={oem} value={oem} className="bg-kawa-gray font-mono">{oem}</option>
+                ))}
+              </optgroup>
+            )}
           </select>
         </div>
         <div className="flex items-center gap-1 bg-kawa-gray border border-gray-800 rounded-lg p-1">
@@ -435,6 +479,11 @@ export default function ProductsPage() {
                   {product.group_tag && (
                     <span className="bg-blue-500/10 text-blue-400 border border-blue-500/20 text-[10px] uppercase font-bold px-2 py-0.5 rounded">
                       {product.group_tag}
+                    </span>
+                  )}
+                  {product.oem_code && (
+                    <span className="bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-[10px] font-mono font-bold px-2 py-0.5 rounded">
+                      OEM: {product.oem_code}
                     </span>
                   )}
                 </div>
@@ -655,6 +704,49 @@ export default function ProductsPage() {
                   onChange={(e) => setBatchEditData({ ...batchEditData, is_incoming: e.target.checked })}
                   disabled={!batchEditFlags.is_incoming}
                   className="w-5 h-5 rounded border-gray-700 bg-kawa-black text-kawa-green focus:ring-kawa-green disabled:opacity-50"
+                />
+              </div>
+
+              {/* Categoría */}
+              <div className="flex items-center gap-4 bg-[#111] p-3 rounded-lg border border-[#333]">
+                <input
+                  type="checkbox"
+                  checked={batchEditFlags.category_id}
+                  onChange={(e) => setBatchEditFlags({ ...batchEditFlags, category_id: e.target.checked })}
+                  className="w-5 h-5 rounded border-gray-700 bg-kawa-black text-kawa-green focus:ring-kawa-green"
+                />
+                <label className="text-sm font-medium text-gray-300 w-24">Categoría</label>
+                <select
+                  value={batchEditData.category_id}
+                  onChange={(e) => setBatchEditData({ ...batchEditData, category_id: e.target.value })}
+                  disabled={!batchEditFlags.category_id}
+                  className="flex-1 bg-kawa-gray text-white rounded-lg border border-[#444] px-3 py-2 focus:outline-none focus:border-kawa-green disabled:opacity-50"
+                >
+                  <option value="">Selecciona una categoría</option>
+                  {categories.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Código OEM */}
+              <div className="flex items-center gap-4 bg-[#111] p-3 rounded-lg border border-[#333]">
+                <input
+                  type="checkbox"
+                  checked={batchEditFlags.oem_code}
+                  onChange={(e) => setBatchEditFlags({ ...batchEditFlags, oem_code: e.target.checked })}
+                  className="w-5 h-5 rounded border-gray-700 bg-kawa-black text-kawa-green focus:ring-kawa-green"
+                />
+                <label className="text-sm font-medium text-gray-300 w-24">Código OEM</label>
+                <input
+                  type="text"
+                  value={batchEditData.oem_code}
+                  onChange={(e) => setBatchEditData({ ...batchEditData, oem_code: e.target.value })}
+                  disabled={!batchEditFlags.oem_code}
+                  placeholder="Ej: 21163-0058"
+                  className="flex-1 bg-kawa-gray text-white rounded-lg border border-[#444] px-3 py-2 focus:outline-none focus:border-kawa-green disabled:opacity-50 uppercase font-mono"
                 />
               </div>
             </div>

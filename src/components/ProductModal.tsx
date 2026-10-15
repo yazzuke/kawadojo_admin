@@ -31,6 +31,7 @@ export default function ProductModal({ product, initialData, onClose, onSuccess 
     source: '',
     category_id: '',
     group_tag: '',
+    oem_code: '',
     compatible_models: [] as string[],
   });
 
@@ -60,6 +61,7 @@ export default function ProductModal({ product, initialData, onClose, onSuccess 
         source: product.source,
         category_id: product.category_id,
         group_tag: product.group_tag || '',
+        oem_code: product.oem_code || '',
         compatible_models: product.compatible_models.map((m) => m.id),
       });
       setExistingImages(product.images.map((img) => ({ id: img.id, url: img.url })));
@@ -77,6 +79,7 @@ export default function ProductModal({ product, initialData, onClose, onSuccess 
         source: initialData.source || '',
         category_id: initialData.category_id || '',
         group_tag: initialData.group_tag || '',
+        oem_code: initialData.oem_code || '',
         compatible_models: initialData.compatible_models?.map((m) => m.id) || [],
       });
       // Fetch images from source product and preload them
@@ -194,6 +197,7 @@ export default function ProductModal({ product, initialData, onClose, onSuccess 
         source: formData.source,
         category_id: formData.category_id,
         group_tag: formData.group_tag,
+        oem_code: formData.oem_code || undefined,
         compatible_models: formData.compatible_models,
         images: images,
         deleted_images: deletedImageIds.length > 0 ? deletedImageIds : undefined,
@@ -339,18 +343,32 @@ export default function ProductModal({ product, initialData, onClose, onSuccess 
             />
           </div>
 
-          {/* Source */}
-          <div>
-            <label className="block text-sm font-medium text-gray-300 mb-2">
-              Fuente/Origen
-            </label>
-            <input
-              type="text"
-              value={formData.source}
-              onChange={(e) => setFormData({ ...formData, source: e.target.value })}
-              placeholder="ej: ninja 400 2019 8000mph"
-              className="w-full px-4 py-2 bg-kawa-black border border-gray-700 rounded-lg text-white focus:outline-none focus:border-kawa-green"
-            />
+          {/* Source & OEM Code */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-300 mb-2">
+                Fuente/Origen
+              </label>
+              <input
+                type="text"
+                value={formData.source}
+                onChange={(e) => setFormData({ ...formData, source: e.target.value })}
+                placeholder="ej: ninja 400 2019 8000mph"
+                className="w-full px-4 py-2 bg-kawa-black border border-gray-700 rounded-lg text-white focus:outline-none focus:border-kawa-green"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-300 mb-2">
+                Código OEM <span className="text-xs text-kawa-green font-normal">(Parte Oficial)</span>
+              </label>
+              <input
+                type="text"
+                value={formData.oem_code || ''}
+                onChange={(e) => setFormData({ ...formData, oem_code: e.target.value })}
+                placeholder="Ej: 21163-0058 o 11004-0011"
+                className="w-full px-4 py-2 bg-kawa-black border border-gray-700 rounded-lg text-white focus:outline-none focus:border-kawa-green font-mono uppercase"
+              />
+            </div>
           </div>
 
           {/* Condition & Stock & Original */}

@@ -36,6 +36,7 @@ export interface Product {
   condition: 'nuevo' | 'usado';
   source: string;
   group_tag: string | null;
+  oem_code?: string | null;
   created_at: string;
   updated_at: string;
   category_name: string;
@@ -85,6 +86,7 @@ export interface CreateProductData {
   source: string;
   category_id: string;
   group_tag?: string;
+  oem_code?: string;
   compatible_models: string[];
   images: File[];
   deleted_images?: string[];

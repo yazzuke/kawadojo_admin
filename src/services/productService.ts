@@ -38,6 +38,7 @@ export const productService = {
     formData.append('source', data.source);
     formData.append('category_id', data.category_id);
     if (data.group_tag) formData.append('group_tag', data.group_tag);
+    if (data.oem_code) formData.append('oem_code', data.oem_code);
     
     // Compatible models es un array de IDs
     data.compatible_models.forEach((modelId) => {
@@ -72,6 +73,7 @@ export const productService = {
     if (data.source) formData.append('source', data.source);
     if (data.category_id) formData.append('category_id', data.category_id);
     if (data.group_tag !== undefined) formData.append('group_tag', data.group_tag);
+    if (data.oem_code !== undefined) formData.append('oem_code', data.oem_code);
     
     if (data.compatible_models) {
       data.compatible_models.forEach((modelId) => {

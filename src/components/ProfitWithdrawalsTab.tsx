@@ -146,7 +146,7 @@ useEffect(() => {
             <p className="text-sm font-bold text-purple-400">{formatCurrency(totalWithdrawn)}</p>
           </div>
           <div className="bg-kawa-black/50 p-3 rounded-lg">
-            <p className="text-[10px] text-gray-500 uppercase tracking-wider">Disponible</p>
+            <p className="text-[10px] text-gray-500 uppercase tracking-wider">Por Retirar</p>
             <p className={`text-sm font-bold ${availableProfit >= 0 ? 'text-kawa-green' : 'text-red-400'}`}>
               {formatCurrency(availableProfit)}
             </p>

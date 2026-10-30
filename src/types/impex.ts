@@ -60,11 +60,20 @@ export interface SavedImpexPart {
   weight: number | null;
   type_id: number | null;
   kawadojo_price: number;
+  builder_mode?: 'auto' | 'fixed' | 'off';
+  builder_qty?: number | null;
   compatible_moto_models?: string[];
   base_product_id?: string | null;
   base_product?: { id: string; name: string; } | null;
   created_at?: string;
   updated_at?: string;
+}
+
+// Opción de envío Japón → país calculada por la API de Impex
+export interface ImpexShippingOption {
+  name: string;         // EMS, DHL, FedEx (priority)...
+  total_jpy: number;    // Valor declarado + envío
+  shipping_jpy: number; // Solo el envío
 }
 
 export interface ImpexQuoteItem {

@@ -245,42 +245,87 @@ export default function BatchesPage({ onOpenBatch }: BatchesPageProps = {}) {
                       {formatCurrency(summary.actual.total_actual_revenue)}
                     </span>
                   </div>
-                  <div className="flex justify-between">
-                    <span className="text-white text-sm">Egresos:</span>
-                    <span className="text-red-400 font-medium">
-                      {formatCurrency(summary.actual.total_outflows)}
-                    </span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-white text-sm">Ganancia:</span>
-                    <span className={`font-medium ${
-                      summary.actual.real_profit >= 0 ? 'text-green-400' : 'text-red-400'
-                    }`}>
-                      {formatCurrency(summary.actual.real_profit)}
-                    </span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-white text-sm">vs Inversión:</span>
-                    <span className={`font-medium ${
-                      summary.actual.profit_vs_investment >= 0 ? 'text-green-400' : 'text-red-400'
-                    }`}>
-                      {formatCurrency(summary.actual.profit_vs_investment)}
-                    </span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-white text-sm">Margen:</span>
-                    <span className="text-kawa-green font-bold">
-                      {summary.actual.sales_margin}
-                    </span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-white text-sm">ROI:</span>
-                    <span className={`font-bold ${
-                      parseFloat(summary.actual.actual_roi) >= 0 ? 'text-green-400' : 'text-red-400'
-                    }`}>
-                      {summary.actual.actual_roi}
-                    </span>
-                  </div>
+                  {summary.actual.net_profit !== undefined ? (
+                    <>
+                      <div className="flex justify-between">
+                        <span className="text-white text-sm">Costo de lo vendido:</span>
+                        <span className="text-red-400 font-medium">
+                          {formatCurrency(summary.actual.cost_of_goods_sold ?? 0)}
+                        </span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-white text-sm">Egresos:</span>
+                        <span className="text-red-400 font-medium">
+                          {formatCurrency(summary.actual.total_outflows)}
+                        </span>
+                      </div>
+                      <div className="flex justify-between pt-1 border-t border-gray-700">
+                        <span className="text-white text-sm">Ganancia Neta:</span>
+                        <span className={`font-medium ${
+                          summary.actual.net_profit >= 0 ? 'text-green-400' : 'text-red-400'
+                        }`}>
+                          {formatCurrency(summary.actual.net_profit)}
+                        </span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-white text-sm">Margen Neto:</span>
+                        <span className={`font-bold ${
+                          parseFloat(summary.actual.net_margin ?? '0') >= 0 ? 'text-kawa-green' : 'text-red-400'
+                        }`}>
+                          {summary.actual.net_margin}
+                        </span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-white text-sm">ROI sobre lo vendido:</span>
+                        <span className={`font-bold ${
+                          parseFloat(summary.actual.net_roi_sold ?? '0') >= 0 ? 'text-green-400' : 'text-red-400'
+                        }`}>
+                          {summary.actual.net_roi_sold}
+                        </span>
+                      </div>
+                      <div className="flex justify-between pt-1 border-t border-gray-700">
+                        <span className="text-gray-400 text-sm">Inventario a costo:</span>
+                        <span className="text-purple-400 font-medium">
+                          {formatCurrency(summary.actual.inventory_value ?? 0)}
+                        </span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-400 text-sm" title="Ingresos - inversión total - egresos (incluye lo que sigue en inventario)">
+                          Caja vs Inversión:
+                        </span>
+                        <span className={`font-medium ${
+                          summary.actual.profit_vs_investment >= 0 ? 'text-green-400' : 'text-red-400'
+                        }`}>
+                          {formatCurrency(summary.actual.profit_vs_investment)}
+                        </span>
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <div className="flex justify-between">
+                        <span className="text-white text-sm">Egresos:</span>
+                        <span className="text-red-400 font-medium">
+                          {formatCurrency(summary.actual.total_outflows)}
+                        </span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-white text-sm">vs Inversión:</span>
+                        <span className={`font-medium ${
+                          summary.actual.profit_vs_investment >= 0 ? 'text-green-400' : 'text-red-400'
+                        }`}>
+                          {formatCurrency(summary.actual.profit_vs_investment)}
+                        </span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-white text-sm">ROI:</span>
+                        <span className={`font-bold ${
+                          parseFloat(summary.actual.actual_roi) >= 0 ? 'text-green-400' : 'text-red-400'
+                        }`}>
+                          {summary.actual.actual_roi}
+                        </span>
+                      </div>
+                    </>
+                  )}
                 </div>
               </div>
             </div>

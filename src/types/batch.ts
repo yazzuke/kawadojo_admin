@@ -151,6 +151,12 @@ export interface BatchSummary {
     sales_margin: string;
     profit_vs_investment: number;
     actual_roi: string;
+    cost_of_goods_sold?: number;
+    gross_profit?: number;
+    net_profit?: number;
+    net_margin?: string;
+    net_roi_sold?: string;
+    inventory_value?: number;
     completion_percentage: string;
   };
   expenses: {

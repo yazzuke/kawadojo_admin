@@ -13,7 +13,8 @@ import {
   TrendingUp,
   MessageSquare,
   ReceiptJapaneseYen,
-  BookOpen
+  BookOpen,
+  Sparkles
 } from 'lucide-react';
 import { useState } from 'react';
 
@@ -31,6 +32,7 @@ const navItems = [
   { to: '/ebay', icon: ShoppingBag, label: 'eBay' },
   { to: '/oem', icon: BookOpen, label: 'Catálogo OEM' },
   { to: '/resale-pricing', icon: Package, label: 'Precios Lista' },
+  { to: '/ai', icon: Sparkles, label: 'Asistente IA' },
 ];
 
 export default function AdminLayout() {

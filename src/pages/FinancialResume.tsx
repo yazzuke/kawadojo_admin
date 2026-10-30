@@ -650,7 +650,12 @@ function OverviewTab({
           </h3>
           <div className="space-y-3">
             <div className="flex justify-between">
-              <span className="text-gray-400">Ganancia Bruta:</span>
+              <span
+                className="text-gray-400"
+                title="Ingresos - costo de lo vendido (compra + envío + aduana + adicionales del lote)"
+              >
+                Ganancia Bruta:
+              </span>
               <span className="text-green-400 font-medium">
                 {formatCurrency(summary.profitability.gross_profit)}
               </span>
@@ -720,13 +725,41 @@ function OverviewTab({
                 </span>
               </div>
               <div className="flex justify-between">
-                <span className="text-white font-semibold">Caja Disponible:</span>
+                <span
+                  className="text-white font-semibold"
+                  title="Ganancia neta - retiros. No es el saldo en bancos: parte puede estar en stock o pagando deudas."
+                >
+                  Ganancia por Retirar:
+                </span>
                 <span
                   className={`text-xl font-bold ${(summary.profitability.net_profit - totalWithdrawn) >= 0 ? "text-kawa-green" : "text-red-400"}`}
                 >
                   {formatCurrency(summary.profitability.net_profit - totalWithdrawn)}
                 </span>
               </div>
+              {summary.profitability.stock_unrealized_profit !== undefined && (
+                <>
+                  <div className="flex justify-between text-sm">
+                    <span
+                      className="text-gray-400"
+                      title={`${summary.profitability.stock_units} uds: valen ${formatCurrency(summary.profitability.stock_sale_value ?? 0)} a precio de venta y costaron ${formatCurrency(summary.profitability.stock_cost ?? 0)}`}
+                    >
+                      + Ganancia en stock (por vender):
+                    </span>
+                    <span className="text-purple-400 font-medium">
+                      {formatCurrency(summary.profitability.stock_unrealized_profit)}
+                    </span>
+                  </div>
+                  <div className="flex justify-between pt-2 border-t border-gray-700">
+                    <span className="text-gray-300 font-semibold">Total si vendes todo:</span>
+                    <span className="text-lg font-bold text-white">
+                      {formatCurrency(
+                        summary.profitability.net_profit - totalWithdrawn + summary.profitability.stock_unrealized_profit
+                      )}
+                    </span>
+                  </div>
+                </>
+              )}
             </div>
           </div>
         </div>

@@ -1,5 +1,5 @@
 import api from './api';
-import type { ImpexResponse, ImpexSavePayload, SavedImpexPart } from '../types/impex';
+import type { ImpexResponse, ImpexSavePayload, ImpexShippingOption, SavedImpexPart } from '../types/impex';
 
 export const impexService = {
   savePart: async (payload: ImpexSavePayload): Promise<any> => {
@@ -8,6 +8,18 @@ export const impexService = {
   },
   searchPart: async (partNo: string): Promise<ImpexResponse> => {
     const response = await api.get(`/impex/search?part_no=${encodeURIComponent(partNo)}`);
+    return response.data;
+  },
+  updateBuilderSettings: async (id: string, mode: 'auto' | 'fixed' | 'off', qty: number | null) => {
+    const response = await api.put(`/impex/builder-settings/${id}`, { mode, qty });
+    return response.data;
+  },
+  getSalesStats: async (): Promise<{ success: boolean; data: import('../Utils/orderBuilder').SalesStat[] }> => {
+    const response = await api.get('/impex/sales-stats');
+    return response.data;
+  },
+  calcShipping: async (weightKg: number, priceJpy: number): Promise<{ success: boolean; data: ImpexShippingOption[] }> => {
+    const response = await api.get('/impex/shipping', { params: { weight: weightKg, price_jpy: Math.round(priceJpy) } });
     return response.data;
   },
   getSavedParts: async (): Promise<{ success: boolean; data: SavedImpexPart[] }> => {

@@ -136,6 +136,10 @@ export interface FinancialSummaryData {
     net_profit: number;
     net_margin: string;
     roi: string;
+    stock_units?: number;
+    stock_cost?: number;
+    stock_sale_value?: number;
+    stock_unrealized_profit?: number;
   };
 
   top_products: Array<{

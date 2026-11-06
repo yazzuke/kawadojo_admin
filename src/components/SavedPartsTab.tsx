@@ -16,9 +16,9 @@ interface Props {
 const NONE = '__none__';
 
 const sourceLabel: Record<NonNullable<ImpexCategorySuggestion['source']>, { text: string; style: string }> = {
-  producto: { text: 'producto', style: 'bg-blue-500/15 text-blue-300' },
-  regla: { text: 'nombre', style: 'bg-gray-700 text-gray-300' },
-  ia: { text: 'IA', style: 'bg-purple-500/15 text-purple-300' },
+  producto: { text: 'Igual que en tu tienda', style: 'bg-blue-500/15 text-blue-300' },
+  regla: { text: 'Por el nombre', style: 'bg-gray-700 text-gray-300' },
+  ia: { text: 'Sugerido por IA', style: 'bg-purple-500/15 text-purple-300' },
 };
 
 export default function SavedPartsTab({ onEdit, exchangeRate, usdExchangeRate, refreshTrigger }: Props) {
@@ -155,7 +155,9 @@ export default function SavedPartsTab({ onEdit, exchangeRate, usdExchangeRate, r
             <div className="mr-auto">
               <h3 className="text-white font-bold flex items-center gap-2"><Sparkles size={16} className="text-purple-400" /> Categorías propuestas</h3>
               <p className="text-xs text-gray-400 mt-0.5">
-                Del <span className="text-blue-300">producto</span> en la tienda, por el <span className="text-gray-300">nombre</span> o por la <span className="text-purple-300">IA</span>. Revisa y cambia lo que haga falta.
+                <span className="text-blue-300">Igual que en tu tienda</span>: un producto tuyo con el mismo código OEM ya tiene esa categoría ·{' '}
+                <span className="text-gray-300">Por el nombre</span>: sale de palabras como "empaque" o "anillo" ·{' '}
+                <span className="text-purple-300">IA</span>: lo sugiere Gemini. Las que quedan "Sin categoría" ponlas tú. Nada se guarda hasta que le des Guardar.
               </p>
             </div>
             <button onClick={() => setSuggestions(null)} className="text-sm text-gray-400 hover:text-white px-3 py-2">Cancelar</button>

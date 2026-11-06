@@ -26,7 +26,24 @@ export interface ImpexVerification {
   price_yen_now?: number | null;
 }
 
+export interface CatalogSuggestion {
+  part_no: string;
+  name: string;
+  reason: string;
+  impex: { found: boolean; name?: string | null; price_yen?: number | null; discontinued?: boolean; replaced_by?: string | null } | null;
+  already_saved: boolean;
+  saved_as?: { part_no: string; name: string } | null;
+}
+
 export const aiService = {
+  askCatalog: async (
+    question: string,
+    partIds: string[],
+    filters: { category_id?: string | null; moto_model_id?: string | null }
+  ): Promise<{ answer: string; suggestions: CatalogSuggestion[]; parts_count: number }> => {
+    const response = await api.post('/ai/catalog/ask', { question, part_ids: partIds, ...filters }, { timeout: 180_000 });
+    return response.data.data;
+  },
   getStatus: async (): Promise<{ impex: number; products: number; ai_configured: boolean }> => {
     const response = await api.get('/ai/compatibility/status');
     return response.data.data;

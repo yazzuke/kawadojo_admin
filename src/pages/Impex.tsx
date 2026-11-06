@@ -117,6 +117,7 @@ const Impex: React.FC = () => {
   const [modalType, setModalType] = useState<'save' | 'edit' | null>(null);
   const [motoModels, setMotoModels] = useState<any[]>([]);
   const [refreshKey, setRefreshKey] = useState(0);
+  const [editingPartId, setEditingPartId] = useState<string | null>(null);
 
   // Modal Content State
   const [formData, setFormData] = useState({
@@ -176,6 +177,7 @@ const Impex: React.FC = () => {
 
   const handleOpenEditModal = (part: any) => {
     setModalType('edit');
+    setEditingPartId(part.id ? String(part.id) : null);
     setFormData({
       mark: part.mark || '',
       part_no: part.part_no || part.part || '',
@@ -190,7 +192,9 @@ const Impex: React.FC = () => {
       kawadojo_price: part.kawadojo_price || 0,
       profit: part.profit || 0,
       margin: part.margin || 0,
-      compatible_moto_models: part.compatible_moto_models || [],
+      // El servidor manda los modelos en "compatibility"; antes se leía un campo que no existe y salían vacíos
+      compatible_moto_models: part.compatible_moto_models
+        || (part.compatibility || []).map((c: any) => c.moto_models?.id || c.moto_model_id).filter(Boolean),
       base_product_id: part.base_product_id || null,
       base_product: part.base_product || null,
     });
@@ -226,6 +230,7 @@ const Impex: React.FC = () => {
         toast.success('Repuesto guardado correctamente');
       } else if (modalType === 'edit') {
         await impexService.updatePart({
+          id: editingPartId || undefined,
           mark: formData.mark,
           part_no: formData.part_no,
           part_no_raw: formData.part_no_raw,
@@ -257,12 +262,23 @@ const Impex: React.FC = () => {
 
   const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!searchTerm.trim()) return;
+    runSearch(searchTerm);
+  };
+
+  // Abre la consulta con un código (por ejemplo, una pieza que sugirió la IA)
+  const searchInImpex = (partNo: string) => {
+    setSearchTerm(partNo);
+    setActiveTab('search');
+    runSearch(partNo);
+  };
+
+  const runSearch = async (term: string) => {
+    if (!term.trim()) return;
 
     try {
       setLoading(true);
       setError(null);
-      const res = await impexService.searchPart(searchTerm);
+      const res = await impexService.searchPart(term);
       if (res.success) {
         setResult(res.data);
       } else {
@@ -444,8 +460,9 @@ const Impex: React.FC = () => {
           )}
           </>
         ) : (
-          <SavedPartsTab 
-            onEdit={handleOpenEditModal} 
+          <SavedPartsTab
+            onEdit={handleOpenEditModal}
+            onSearchPart={searchInImpex}
             exchangeRate={exchangeRate}
             usdExchangeRate={usdExchangeRate}
             refreshTrigger={refreshKey}

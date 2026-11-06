@@ -45,7 +45,7 @@ export const impexService = {
     if (data && Array.isArray(data.data)) return data.data;
     return [];
   },
-  updatePart: async (payload: Partial<ImpexSavePayload>): Promise<any> => {
+  updatePart: async (payload: Partial<ImpexSavePayload> & { id?: string }): Promise<any> => {
     const response = await api.put('/impex/update', payload);
     return response.data;
   },

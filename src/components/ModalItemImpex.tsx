@@ -159,13 +159,20 @@ const ModalItemImpex: React.FC<ModalItemImpexProps> = ({
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-gray-400 mb-1.5 ml-1">Part No Raw</label>
+                  <label className="block text-xs font-medium text-gray-400 mb-1.5 ml-1">Número de parte</label>
                   <input
                     type="text"
-                    className={inputClassName}
-                    value={formData.part_no_raw}
-                    onChange={(e) => onFormDataChange({ ...formData, part_no_raw: e.target.value })}
+                    className={`${inputClassName} font-mono`}
+                    value={formData.part_no}
+                    placeholder="11061-1477"
+                    // El raw (sin guiones) se arma solo para que nunca quede distinto al número de parte
+                    onChange={(e) => onFormDataChange({
+                      ...formData,
+                      part_no: e.target.value,
+                      part_no_raw: e.target.value.replace(/[^A-Za-z0-9]/g, '').toUpperCase(),
+                    })}
                   />
+                  <p className="text-[11px] text-gray-500 mt-1 ml-1">Si Impex te dio un código nuevo al comprar, ponlo aquí.</p>
                 </div>
                 <div>
                   <label className="block text-xs font-medium text-gray-400 mb-1.5 ml-1">Nombre Japonés</label>

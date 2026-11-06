@@ -5,9 +5,11 @@ import { impexService } from '../services/Impex';
 import { categoryService } from '../services/categoryService';
 import type { Category } from '../types/product';
 import type { ImpexCategorySuggestion, SavedImpexPart } from '../types/impex';
+import CatalogAskPanel from './CatalogAskPanel';
 
 interface Props {
   onEdit: (part: SavedImpexPart) => void;
+  onSearchPart: (partNo: string) => void;
   exchangeRate: number | string;
   usdExchangeRate: number | string;
   refreshTrigger?: number;
@@ -15,19 +17,28 @@ interface Props {
 
 const NONE = '__none__';
 
+// Códigos Kawasaki escritos en el nombre que no son el código guardado (código nuevo o alterno)
+const otherCodesInName = (p: SavedImpexPart) => {
+  const own = (p.part_no || '').replace(/[^0-9A-Z]/gi, '').toUpperCase();
+  const found = `${p.name_es || ''} ${p.name_en || ''}`.match(/\b\d{5}-\d{4}(?:-[A-Z0-9]{1,4})?\b/gi) || [];
+  return [...new Set(found)].filter(c => c.replace(/[^0-9A-Z]/gi, '').toUpperCase() !== own);
+};
+
 const sourceLabel: Record<NonNullable<ImpexCategorySuggestion['source']>, { text: string; style: string }> = {
   producto: { text: 'Igual que en tu tienda', style: 'bg-blue-500/15 text-blue-300' },
   regla: { text: 'Por el nombre', style: 'bg-gray-700 text-gray-300' },
   ia: { text: 'Sugerido por IA', style: 'bg-purple-500/15 text-purple-300' },
 };
 
-export default function SavedPartsTab({ onEdit, exchangeRate, usdExchangeRate, refreshTrigger }: Props) {
+export default function SavedPartsTab({ onEdit, onSearchPart, exchangeRate, usdExchangeRate, refreshTrigger }: Props) {
+  const [askOpen, setAskOpen] = useState(false);
   const [parts, setParts] = useState<SavedImpexPart[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [term, setTerm] = useState('');
   const [categoryFilter, setCategoryFilter] = useState<string | null>(null); // id, NONE o null = todas
+  const [modelFilter, setModelFilter] = useState<string | null>(null);       // id de moto, NONE o null = todas
 
   // Clasificación automática: propuestas para revisar antes de guardar
   const [suggesting, setSuggesting] = useState(false);
@@ -113,9 +124,31 @@ export default function SavedPartsTab({ onEdit, exchangeRate, usdExchangeRate, r
     return map;
   }, [parts]);
 
+  const modelsOf = (p: SavedImpexPart) => (p.compatibility || []).map(c => c.moto_models);
+  const matchesModel = (p: SavedImpexPart, id: string | null) =>
+    id === null || (id === NONE ? modelsOf(p).length === 0 : modelsOf(p).some(m => m.id === id));
+
+  // Motos para filtrar: cuenta las piezas de la categoría elegida que le sirven a cada moto
+  const inCategory = parts.filter(p => categoryFilter === null || (p.category_id || NONE) === categoryFilter);
+  const modelChips = useMemo(() => {
+    const map = new Map<string, { id: string; name: string; count: number }>();
+    let noModel = 0;
+    inCategory.forEach(p => {
+      const models = modelsOf(p);
+      if (!models.length) noModel += 1;
+      models.forEach(m => {
+        const entry = map.get(m.id) || { id: m.id, name: m.name, count: 0 };
+        entry.count += 1;
+        map.set(m.id, entry);
+      });
+    });
+    return { models: [...map.values()].sort((a, b) => a.name.localeCompare(b.name)), noModel };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [parts, categoryFilter]);
+
   const t = term.trim().toLowerCase();
-  const visible = parts.filter(p =>
-    (categoryFilter === null || (p.category_id || NONE) === categoryFilter) &&
+  const visible = inCategory.filter(p =>
+    matchesModel(p, modelFilter) &&
     (!t || [p.name_es, p.name_en, p.name_ja, p.part_no].some(v => (v || '').toLowerCase().includes(t)))
   );
   const missing = counts.get(NONE) || 0;
@@ -139,6 +172,20 @@ export default function SavedPartsTab({ onEdit, exchangeRate, usdExchangeRate, r
       className={`px-3 py-1.5 rounded-full text-xs font-semibold border transition-colors ${
         categoryFilter === id
           ? 'bg-kawa-green text-black border-kawa-green'
+          : warn ? 'border-yellow-600/60 text-yellow-400 hover:border-yellow-500' : 'border-gray-700 text-gray-300 hover:border-gray-500'
+      }`}
+    >
+      {label} <span className="opacity-70">{count}</span>
+    </button>
+  );
+
+  const modelChip = (id: string | null, label: string, count: number, warn = false) => (
+    <button
+      key={id ?? 'all-models'}
+      onClick={() => setModelFilter(id)}
+      className={`px-3 py-1.5 rounded-full text-xs font-semibold border transition-colors ${
+        modelFilter === id
+          ? 'bg-blue-500 text-white border-blue-500'
           : warn ? 'border-yellow-600/60 text-yellow-400 hover:border-yellow-500' : 'border-gray-700 text-gray-300 hover:border-gray-500'
       }`}
     >
@@ -216,6 +263,14 @@ export default function SavedPartsTab({ onEdit, exchangeRate, usdExchangeRate, r
               )}
             </div>
             <button
+              onClick={() => setAskOpen(o => !o)}
+              disabled={visible.length === 0}
+              title="Pregúntale a la IA sobre las piezas que estás viendo"
+              className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-semibold disabled:opacity-40 ${askOpen ? 'bg-purple-500 text-white' : 'bg-purple-500/15 text-purple-200 border border-purple-500/50 hover:border-purple-400'}`}
+            >
+              <Sparkles size={15} /> Preguntar a la IA ({visible.length})
+            </button>
+            <button
               onClick={runSuggest}
               disabled={suggesting || missing === 0}
               title={missing === 0 ? 'Todas tienen categoría' : 'Propone categoría para las piezas que no tienen'}
@@ -226,12 +281,33 @@ export default function SavedPartsTab({ onEdit, exchangeRate, usdExchangeRate, r
             </button>
             <button onClick={fetchAll} className="text-gray-400 hover:text-white p-2" title="Recargar"><RefreshCw size={18} /></button>
           </div>
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="text-[11px] uppercase tracking-wider text-gray-500 w-16">Categoría</span>
             {chip(null, 'Todas', parts.length)}
             {categories.filter(c => counts.get(c.id)).map(c => chip(c.id, c.name, counts.get(c.id) || 0))}
             {missing > 0 && chip(NONE, 'Sin categoría', missing, true)}
           </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="text-[11px] uppercase tracking-wider text-gray-500 w-16">Moto</span>
+            {modelChip(null, 'Todas', inCategory.length)}
+            {modelChips.models.map(m => modelChip(m.id, m.name, m.count))}
+            {modelChips.noModel > 0 && modelChip(NONE, 'Sin modelo', modelChips.noModel, true)}
+          </div>
         </div>
+
+        {askOpen && visible.length > 0 && (
+          <div className="p-4 border-b border-gray-800">
+            <CatalogAskPanel
+              partIds={visible.map(p => String(p.id))}
+              categoryId={categoryFilter && categoryFilter !== NONE ? categoryFilter : null}
+              categoryName={categoryFilter === NONE ? 'Sin categoría' : categories.find(c => c.id === categoryFilter)?.name || null}
+              modelId={modelFilter && modelFilter !== NONE ? modelFilter : null}
+              modelName={modelFilter === NONE ? null : modelChips.models.find(m => m.id === modelFilter)?.name || null}
+              onSearchPart={onSearchPart}
+              onClose={() => setAskOpen(false)}
+            />
+          </div>
+        )}
 
         {visible.length > 0 ? (
           <div className="overflow-x-auto">
@@ -261,9 +337,21 @@ export default function SavedPartsTab({ onEdit, exchangeRate, usdExchangeRate, r
                         <p className="text-white font-medium truncate" title={part.name_es || part.name_en || part.name_ja || ''}>
                           {part.name_es || part.name_en || part.name_ja}
                         </p>
-                        <p className="text-xs text-gray-500 font-mono mt-0.5">
-                          {part.part_no} · {part.mark}{part.created_at && ` · ${new Date(part.created_at).toLocaleDateString('es-CO')}`}
-                        </p>
+                        <div className="flex flex-wrap items-center gap-1 mt-1">
+                          <span className="text-xs text-gray-500 font-mono mr-1">{part.part_no}</span>
+                          {otherCodesInName(part).map(code => (
+                            <span
+                              key={code}
+                              title="El nombre trae otro código: puede ser el código nuevo (reemplazo) o el de otra moto. Confirma cuál es el que pides en Impex."
+                              className="px-1.5 py-0.5 rounded bg-yellow-500/10 text-yellow-400 text-[10px] font-semibold font-mono"
+                            >
+                              nombre: {code}
+                            </span>
+                          ))}
+                          {modelsOf(part).map(m => (
+                            <span key={m.id} className="px-1.5 py-0.5 rounded bg-blue-500/10 text-blue-300 text-[10px] font-semibold">{m.name}</span>
+                          ))}
+                        </div>
                       </td>
                       <td className="p-4">
                         <select

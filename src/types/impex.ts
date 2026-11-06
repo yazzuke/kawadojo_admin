@@ -60,6 +60,7 @@ export interface SavedImpexPart {
   weight: number | null;
   type_id: number | null;
   kawadojo_price: number;
+  compatibility?: Array<{ moto_models: { id: string; name: string } }>;
   category_id?: string | null;
   category?: { id: string; name: string; slug: string } | null;
   builder_mode?: 'auto' | 'fixed' | 'off';

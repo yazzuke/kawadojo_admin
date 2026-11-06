@@ -19,6 +19,7 @@ interface CartItem extends SavedImpexPart {
 type View = 'create' | 'builder' | 'compare' | 'list';
 
 const DRAFTS_KEY = 'kawadojo.impex.quoteDrafts';
+const NO_CATEGORY = '__none__';
 
 const inputClass =
   'w-full bg-[#1e1e1e] border border-gray-700 rounded px-2 py-1.5 text-right text-white text-sm focus:border-kawa-green outline-none';
@@ -58,6 +59,7 @@ const QuotesTab = ({
   const [shippingTrm, setShippingTrm] = useState<number | string>(4000);
   const [piezasTrm, setPiezasTrm] = useState<number | string>(() => Math.round(Number(usdExchangeRate) * Number(exchangeRate)));
   const [searchPartTerm, setSearchPartTerm] = useState('');
+  const [catalogCategory, setCatalogCategory] = useState<string | null>(null);
 
   useEffect(() => {
     fetchData();
@@ -93,7 +95,17 @@ const QuotesTab = ({
     setCart(cart.map(c => c.id === id ? { ...c, quantity: qty } : c));
   };
 
+  // Categorías presentes en las piezas guardadas (para filtrar el catálogo)
+  const partCategories = useMemo(() => {
+    const map = new Map<string, string>();
+    savedParts.forEach(p => { if (p.category) map.set(p.category.id, p.category.name); });
+    const list = [...map.entries()].map(([id, name]) => ({ id: id as string | null, name })).sort((a, b) => a.name.localeCompare(b.name));
+    if (savedParts.some(p => !p.category_id)) list.push({ id: NO_CATEGORY, name: 'Sin categoría' });
+    return list;
+  }, [savedParts]);
+
   const filteredSavedParts = savedParts.filter(part => {
+    if (catalogCategory !== null && (part.category_id || NO_CATEGORY) !== catalogCategory) return false;
     const term = searchPartTerm.toLowerCase();
     return (
       (part.name_es?.toLowerCase() || '').includes(term) ||
@@ -246,6 +258,21 @@ const QuotesTab = ({
                   )}
                 </div>
               </div>
+              {partCategories.length > 0 && (
+                <div className="flex flex-wrap gap-1.5 px-3 pt-3">
+                  {[{ id: null as string | null, name: 'Todas' }, ...partCategories].map(c => (
+                    <button
+                      key={c.id ?? 'all'}
+                      onClick={() => setCatalogCategory(c.id)}
+                      className={`px-2.5 py-1 rounded-full text-[11px] font-semibold border transition-colors ${
+                        catalogCategory === c.id ? 'bg-kawa-green text-black border-kawa-green' : 'border-gray-700 text-gray-300 hover:border-gray-500'
+                      }`}
+                    >
+                      {c.name}
+                    </button>
+                  ))}
+                </div>
+              )}
               <div className="grid grid-cols-1 sm:grid-cols-2 2xl:grid-cols-3 gap-2 p-3 max-h-[280px] overflow-y-auto">
                 {filteredSavedParts.map(part => {
                   const inCart = !!cart.find(c => c.id === part.id);
@@ -295,8 +322,8 @@ const QuotesTab = ({
                         <th className="p-3 font-semibold text-center">Cant</th>
                         <th className="p-3 font-semibold text-right">US$ c/u</th>
                         <th className="p-3 font-semibold text-right">Venta c/u</th>
-                        <th className="p-3 font-semibold text-right" title="Pieza + su parte de envío, impuestos y manejo">Costo puesto c/u</th>
-                        <th className="p-3 font-semibold text-right">Utilidad c/u</th>
+                        <th className="p-3 font-semibold text-right" title="Pieza + su envío (según peso) + su IVA/arancel. Sin el manejo fijo del pedido">Costo c/u</th>
+                        <th className="p-3 font-semibold text-right" title="Venta - costo de la pieza. No cambia según qué más metas al pedido">Deja c/u</th>
                         <th className="p-3 font-semibold text-right">Margen</th>
                         <th className="p-3"></th>
                       </tr>
@@ -319,8 +346,11 @@ const QuotesTab = ({
                             </td>
                             <td className="p-3 text-right font-mono text-blue-400 whitespace-nowrap">{(item.price_usd || 0).toFixed(2)}</td>
                             <td className="p-3 text-right font-mono text-kawa-green whitespace-nowrap">{formatCop(item.kawadojo_price || 0)}</td>
-                            <td className="p-3 text-right font-mono text-yellow-500 whitespace-nowrap" title={`Solo la pieza: ${formatCop(line.unitPieceCop)}`}>
-                              {formatCop(line.unitLandedCop)}
+                            <td
+                              className="p-3 text-right font-mono text-yellow-500 whitespace-nowrap"
+                              title={`Solo la pieza: ${formatCop(line.unitPieceCop)} · En el lote (con su parte del manejo): ${formatCop(line.unitLandedCop)}`}
+                            >
+                              {formatCop(line.unitCostCop)}
                             </td>
                             <td className={`p-3 text-right font-mono font-bold whitespace-nowrap ${line.unitProfitCop >= 0 ? 'text-kawa-green' : 'text-red-400'}`}>
                               {formatCop(line.unitProfitCop)}
@@ -339,7 +369,8 @@ const QuotesTab = ({
                     </tbody>
                   </table>
                   <p className="px-3 py-2 text-xs text-gray-500 border-t border-gray-800">
-                    El costo puesto incluye la parte de envío, IVA, arancel y manejo que le toca a cada pieza según su valor.
+                    "Deja c/u" es lo que gana cada pieza por sí sola (venta − pieza, su envío y su IVA) y no cambia aunque agregues otras.
+                    El manejo de la transportadora es uno solo por pedido y está en Costos.
                   </p>
                 </div>
               )}
@@ -482,7 +513,8 @@ const QuotesTab = ({
               {cart.length > 0 && calc.utilidadCop < 0 && (
                 <p className="flex gap-2 text-xs text-red-300 bg-red-900/20 border border-red-900/50 rounded p-2 mt-2">
                   <AlertTriangle size={14} className="shrink-0 mt-0.5" />
-                  Con estas cantidades el manejo e impuestos se comen la ganancia. Agrega más piezas al envío o júntalo con otro pedido.
+                  Las piezas dejan {formatCop(calc.contributionCop)}, pero el manejo fijo es {formatCop(calc.fixedFeesCop)}.
+                  Te faltan {formatCop(-calc.utilidadCop)} de ganancia en piezas para que el pedido valga la pena: agrega más o júntalo con otro.
                 </p>
               )}
 

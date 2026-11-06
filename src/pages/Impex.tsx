@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import type { ImpexResponse, SavedImpexPart } from '../types/impex';
+import type { ImpexResponse } from '../types/impex';
 import { impexService } from '../services/Impex';
 import NavBarImpex from '../components/NavBarImpex';
 import ModalItemImpex from '../components/ModalItemImpex';
-import QuotesTab from '../components/QuotesTab';
+import SavedPartsTab from '../components/SavedPartsTab';
+import { useImpexRates } from '../hooks/useImpexRates';
 import toast from 'react-hot-toast';
 
 const PartRow = ({ 
@@ -103,194 +104,10 @@ const PartRow = ({
   );
 };
 
-const SavedPartsTab = ({ 
-  onEdit, 
-  exchangeRate, 
-  usdExchangeRate,
-  refreshTrigger
-}: { 
-  onEdit: (part: any) => void;
-  exchangeRate: number | string;
-  usdExchangeRate: number | string;
-  refreshTrigger?: number;
-}) => {
-  const [savedParts, setSavedParts] = useState<SavedImpexPart[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  const fetchSavedParts = async () => {
-    try {
-      setLoading(true);
-      setError(null);
-      const res = await impexService.getSavedParts();
-      if (res.success) {
-        setSavedParts(res.data);
-      } else {
-        setError('Respuesta no exitosa de la API');
-      }
-    } catch (err: any) {
-      setError(err.message || 'Error al obtener los repuestos guardados');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchSavedParts();
-  }, [refreshTrigger]);
-
-  const handleDelete = async (partNoRaw: string) => {
-    if (!window.confirm('¿Estás seguro de que deseas eliminar esta pieza? Esta acción no se puede deshacer.')) {
-      return;
-    }
-    
-    try {
-      const res = await impexService.deletePart(partNoRaw);
-      if (res.success) {
-        toast.success(res.message || 'Pieza eliminada');
-        fetchSavedParts();
-      } else {
-        toast.error(res.message || 'Error al eliminar la pieza');
-      }
-    } catch (err: any) {
-      toast.error(err.message || 'Error al eliminar la pieza');
-    }
-  };
-
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-kawa-green"></div>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="p-4 bg-red-900/40 border border-red-800 rounded-lg text-red-400">
-        {error}
-      </div>
-    );
-  }
-
-  return (
-    <div className="bg-kawa-gray rounded-xl border border-gray-800 overflow-hidden shadow-sm">
-      <div className="p-4 border-b border-gray-800 bg-[#2a2a2a] flex justify-between items-center">
-        <h2 className="text-lg font-semibold text-white">Piezas en Base de Datos</h2>
-        <div className="flex items-center gap-4">
-          <span className="bg-[#1e1e1e] text-gray-400 text-xs px-2 py-1 rounded border border-gray-700">
-            {savedParts.length} guardados
-          </span>
-          <button 
-            onClick={fetchSavedParts}
-            className="text-gray-400 hover:text-white transition-colors"
-            title="Recargar"
-          >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-            </svg>
-          </button>
-        </div>
-      </div>
-      {savedParts.length > 0 ? (
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead className="bg-[#1a1a1a] border-b border-gray-800">
-              <tr className="text-left text-gray-400 text-xs">
-                <th className="p-4 font-semibold uppercase tracking-wider">Parte</th>
-                <th className="p-4 font-semibold uppercase tracking-wider">Nombre</th>
-                <th className="p-4 font-semibold uppercase tracking-wider">Marca</th>
-                <th className="p-4 font-semibold uppercase tracking-wider">Base (¥)</th>
-                <th className="p-4 font-semibold uppercase tracking-wider">USD</th>
-                <th className="p-4 font-semibold uppercase tracking-wider">Costo (COP)</th>
-                <th className="p-4 font-semibold uppercase tracking-wider">P. Venta (COP)</th>
-                <th className="p-4 font-semibold uppercase tracking-wider">Utilidad</th>
-                <th className="p-4 font-semibold uppercase tracking-wider">Creado</th>
-                <th className="p-4 font-semibold uppercase tracking-wider text-center">Acciones</th>
-              </tr>
-            </thead>
-            <tbody className="bg-kawa-gray divide-y divide-gray-800">
-              {savedParts.map(part => {
-                const copCost = (part.price_yen || 0) * (Number(exchangeRate) || 0);
-                const priceUsd = (part.price_yen || 0) / (Number(usdExchangeRate) || 160);
-                const sellPrice = part.kawadojo_price || 0;
-                const profit = sellPrice > 0 ? sellPrice - copCost : 0;
-                const margin = copCost > 0 && sellPrice > 0 ? (profit / copCost) * 100 : 0;
-
-                return (
-                <tr key={part.id} className="hover:bg-[#2a2a2a] transition-colors">
-                  <td className="p-4 whitespace-nowrap text-sm font-medium text-white">{part.part_no}</td>
-                  <td className="p-4 text-sm text-gray-400 max-w-xs truncate" title={part.name_es || part.name_en || part.name_ja || ''}>
-                    {part.name_es || part.name_en || part.name_ja}
-                  </td>
-                  <td className="p-4 whitespace-nowrap text-sm text-gray-400">{part.mark}</td>
-                  <td className="p-4 whitespace-nowrap text-sm text-gray-400 font-mono">¥ {part.price_yen?.toLocaleString() ?? 0}</td>
-                  <td className="p-4 whitespace-nowrap text-sm text-blue-400 font-mono">US$ {priceUsd.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
-                  <td className="p-4 whitespace-nowrap text-sm font-semibold text-gray-300">
-                    $ {copCost.toLocaleString('es-CO', { maximumFractionDigits: 0 })}
-                  </td>
-                  <td className="p-4 whitespace-nowrap text-sm font-semibold text-kawa-green">
-                    $ {sellPrice.toLocaleString('es-CO', { maximumFractionDigits: 0 })}
-                  </td>
-                  <td className="p-4 whitespace-nowrap text-sm">
-                    {sellPrice > 0 ? (
-                      <div className="flex flex-col">
-                        <span className={profit > 0 ? 'text-kawa-green font-bold text-base' : 'text-red-500 font-bold text-base'}>
-                          $ {profit.toLocaleString('es-CO', { maximumFractionDigits: 0 })}
-                        </span>
-                        <div className="flex items-center gap-1 mt-0.5">
-                          <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold ${profit > 0 ? 'bg-kawa-green/10 text-kawa-green' : 'bg-red-500/10 text-red-500'}`}>
-                            {profit > 0 ? '↑' : '↓'} {Math.abs(margin).toFixed(1)}%
-                          </span>
-                          <span className="text-xs text-gray-500 font-medium">Margen</span>
-                        </div>
-                      </div>
-                    ) : (
-                      <span className="text-gray-600 font-medium px-2">—</span>
-                    )}
-                  </td>
-                  <td className="p-4 whitespace-nowrap text-sm text-gray-500">
-                    {part.created_at ? new Date(part.created_at).toLocaleDateString('es-CO') : '---'}
-                  </td>
-                  <td className="p-4 whitespace-nowrap text-center">
-                    <div className="flex items-center justify-center gap-2">
-                      <button 
-                        onClick={() => onEdit(part)}
-                        className="bg-gray-800 text-white px-3 py-1 rounded-md hover:bg-gray-700 transition-colors text-xs font-bold"
-                      >
-                        Editar
-                      </button>
-                      <button 
-                        onClick={() => handleDelete(part.part_no_raw)}
-                        className="bg-red-900/50 text-red-400 px-3 py-1 rounded-md hover:bg-red-900 hover:text-red-300 transition-colors text-xs font-bold"
-                      >
-                        Eliminar
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-      ) : (
-        <div className="p-10 text-center flex flex-col items-center">
-           <svg className="w-16 h-16 text-gray-700 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" />
-           </svg>
-           <h3 className="text-white font-bold text-lg">No hay piezas guardadas</h3>
-           <p className="text-gray-500 mt-2">Usa la pestaña de búsqueda para cotizar y guardar repuestos.</p>
-        </div>
-      )}
-    </div>
-  );
-};
 const Impex: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<'search' | 'saved' | 'quote'>('search');
+  const [activeTab, setActiveTab] = useState<'search' | 'saved'>('search');
   const [searchTerm, setSearchTerm] = useState('');
-  const [exchangeRate, setExchangeRate] = useState<number | string>(21.23);
-  const [usdExchangeRate, setUsdExchangeRate] = useState<number | string>(158.12);
+  const { exchangeRate, usdExchangeRate, setExchangeRate, setUsdExchangeRate } = useImpexRates();
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<ImpexResponse['data'] | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -462,7 +279,7 @@ const Impex: React.FC = () => {
   return (
     <div className="p-6">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
-        <h1 className="text-2xl font-bold text-white">Consulta y Cotización de Impex</h1>
+        <h1 className="text-2xl font-bold text-white">Impex: consulta y piezas guardadas</h1>
         <NavBarImpex activeTab={activeTab} onTabChange={setActiveTab} />
       </div>
 
@@ -626,11 +443,6 @@ const Impex: React.FC = () => {
             </div>
           )}
           </>
-        ) : activeTab === 'quote' ? (
-          <QuotesTab 
-            exchangeRate={exchangeRate}
-            usdExchangeRate={usdExchangeRate}
-          />
         ) : (
           <SavedPartsTab 
             onEdit={handleOpenEditModal} 

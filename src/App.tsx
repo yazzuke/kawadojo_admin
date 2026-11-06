@@ -20,6 +20,7 @@ import EbayPage from './pages/Ebay';
 import OemCatalogPage from './pages/OemCatalog';
 import ResalePricingPage from './pages/ResalePricing';
 import AiCompatibilityPage from './pages/AiCompatibility';
+import ImpexQuotesPage from './pages/ImpexQuotes';
 import GlobalToaster from './Utils/Toast';
 
 function App() {
@@ -51,6 +52,7 @@ function App() {
               <Route path="/oem" element={<OemCatalogPage />} />
               <Route path="/resale-pricing" element={<ResalePricingPage />} />
               <Route path="/ai" element={<AiCompatibilityPage />} />
+              <Route path="/impex-cotizaciones" element={<ImpexQuotesPage />} />
             </Route>
           </Route>
 

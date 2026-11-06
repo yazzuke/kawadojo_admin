@@ -1,5 +1,5 @@
 import api from './api';
-import type { ImpexResponse, ImpexSavePayload, ImpexShippingOption, SavedImpexPart } from '../types/impex';
+import type { ImpexCategorySuggestion, ImpexResponse, ImpexSavePayload, ImpexShippingOption, SavedImpexPart } from '../types/impex';
 
 export const impexService = {
   savePart: async (payload: ImpexSavePayload): Promise<any> => {
@@ -8,6 +8,18 @@ export const impexService = {
   },
   searchPart: async (partNo: string): Promise<ImpexResponse> => {
     const response = await api.get(`/impex/search?part_no=${encodeURIComponent(partNo)}`);
+    return response.data;
+  },
+  setCategory: async (id: string, categoryId: string | null) => {
+    const response = await api.put(`/impex/category/${id}`, { category_id: categoryId });
+    return response.data;
+  },
+  suggestCategories: async (onlyMissing = true): Promise<{ success: boolean; data: ImpexCategorySuggestion[] }> => {
+    const response = await api.post('/impex/categories/suggest', { only_missing: onlyMissing }, { timeout: 120_000 });
+    return response.data;
+  },
+  applyCategories: async (items: Array<{ id: string; category_id: string }>) => {
+    const response = await api.post('/impex/categories/apply', { items });
     return response.data;
   },
   updateBuilderSettings: async (id: string, mode: 'auto' | 'fixed' | 'off', qty: number | null) => {

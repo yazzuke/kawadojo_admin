@@ -60,6 +60,8 @@ export interface SavedImpexPart {
   weight: number | null;
   type_id: number | null;
   kawadojo_price: number;
+  category_id?: string | null;
+  category?: { id: string; name: string; slug: string } | null;
   builder_mode?: 'auto' | 'fixed' | 'off';
   builder_qty?: number | null;
   compatible_moto_models?: string[];
@@ -67,6 +69,17 @@ export interface SavedImpexPart {
   base_product?: { id: string; name: string; } | null;
   created_at?: string;
   updated_at?: string;
+}
+
+// Categoría propuesta para una pieza (del producto de la tienda, por regla de nombre o por la IA)
+export interface ImpexCategorySuggestion {
+  id: string;
+  part_no: string;
+  name: string;
+  current: { id: string; name: string } | null;
+  suggested: { id: string; name: string } | null;
+  source: 'producto' | 'regla' | 'ia' | null;
+  reason: string;
 }
 
 // Opción de envío Japón → país calculada por la API de Impex

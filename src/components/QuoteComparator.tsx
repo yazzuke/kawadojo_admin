@@ -341,9 +341,9 @@ export default function QuoteComparator({ drafts, setDrafts, parts, rates, usdJp
                             </div>
                             <div className="flex items-center gap-3 text-[11px] text-gray-500">
                               <span className="font-mono">{formatUsd((line.part.price_usd || 0) * line.quantity)}</span>
-                              <span>puesto {formatCop(line.unitLandedCop)}</span>
-                              <span className={line.unitProfitCop >= 0 ? 'text-kawa-green' : 'text-red-400'}>
-                                {formatCop(line.unitProfitCop)} c/u ({line.marginPct.toFixed(0)}%)
+                              <span title="Pieza + su envío + su IVA, sin el manejo fijo">costo {formatCop(line.unitCostCop)}</span>
+                              <span className={line.unitProfitCop >= 0 ? 'text-kawa-green' : 'text-red-400'} title="Lo que deja la pieza por sí sola">
+                                deja {formatCop(line.unitProfitCop)} c/u ({line.marginPct.toFixed(0)}%)
                               </span>
                               {drafts.length > 1 && (
                                 <select
@@ -369,16 +369,16 @@ export default function QuoteComparator({ drafts, setDrafts, parts, rates, usdJp
 
                   <div className="p-4 border-t border-gray-800 space-y-1.5 text-sm">
                     <div className="flex justify-between text-gray-400">
-                      <span>Piezas + envío</span>
-                      <span className="font-mono text-gray-200">{formatCop(r.piezasCop + r.envioCop)}</span>
+                      <span>Venta / costo total</span>
+                      <span className="font-mono text-gray-200">{formatCop(r.ventasCop)} / {formatCop(r.totalCop)}</span>
                     </div>
                     <div className="flex justify-between text-gray-400">
-                      <span>Impuestos + manejo</span>
-                      <span className="font-mono text-orange-300">{formatCop(r.taxesAndFeesCop)}</span>
+                      <span>Lo que dejan las piezas</span>
+                      <span className="font-mono text-kawa-green">{formatCop(r.contributionCop)}</span>
                     </div>
                     <div className="flex justify-between text-gray-400">
-                      <span>Costo total / Venta</span>
-                      <span className="font-mono text-gray-200">{formatCop(r.totalCop)} / {formatCop(r.ventasCop)}</span>
+                      <span>− Manejo {d.carrier} (fijo)</span>
+                      <span className="font-mono text-orange-300">− {formatCop(r.fixedFeesCop)}</span>
                     </div>
                     <div className="flex justify-between font-bold pt-1">
                       <span className="text-white">Utilidad</span>

@@ -20,9 +20,10 @@ export interface LineResult {
   part: SavedImpexPart;
   quantity: number;
   unitPieceCop: number;   // Solo la pieza
-  unitLandedCop: number;  // Pieza + su parte de envío, impuestos y manejo
-  unitProfitCop: number;
+  unitCostCop: number;    // Pieza + su envío (por peso) + su IVA/arancel. No incluye el manejo fijo del pedido
+  unitProfitCop: number;  // Lo que deja la pieza: venta - unitCostCop. No cambia según qué más vaya en el pedido
   marginPct: number;
+  unitLandedCop: number;  // unitCostCop + su parte del manejo fijo (así queda el costo en el lote)
 }
 
 export interface ShipmentResult {
@@ -41,6 +42,8 @@ export interface ShipmentResult {
   ventasCop: number;
   utilidadCop: number;
   margenPct: number;
+  contributionCop: number; // Suma de lo que dejan las piezas (antes del manejo fijo)
+  fixedFeesCop: number;    // Manejo y cargos de la transportadora: se pagan una vez por pedido
   lines: LineResult[];
 }
 
@@ -83,28 +86,35 @@ export function computeShipment(
   const utilidadCop = ventasCop - totalCop;
   const margenPct = ventasCop > 0 ? (utilidadCop / ventasCop) * 100 : 0;
 
-  // Envío, impuestos y manejo se reparten entre las piezas según su valor en USD
-  const overheadCop = envioCop + taxesAndFeesCop;
+  // Cada pieza carga su propio costo: su envío según su peso y su IVA/arancel según su valor.
+  // El manejo de la transportadora es fijo por pedido, así que no se mete en lo que "deja" cada pieza
+  // (si no, una pieza barata sola parece que pierde plata y al agregar otra "mejora" sin haber cambiado).
+  const totalWeight = lines.reduce((sum, l) => sum + (l.part.weight || 0) * l.quantity, 0);
+  const allWeighed = lines.every((l) => (l.part.weight || 0) > 0);
   const lineResults = lines.map((l) => {
     const unitUsd = l.part.price_usd || 0;
     const unitPieceCop = unitUsd * rates.piezasTrm;
-    const share = subtotalUsd > 0 ? unitUsd / subtotalUsd : units > 0 ? 1 / units : 0;
-    const unitLandedCop = Math.round(unitPieceCop + overheadCop * share);
+    const valueShare = subtotalUsd > 0 ? unitUsd / subtotalUsd : units > 0 ? 1 / units : 0;
+    const weightShare = allWeighed && totalWeight > 0 ? (l.part.weight || 0) / totalWeight : valueShare;
+    const unitCost = unitPieceCop + envioCop * weightShare + (arancelCop + ivaCop) * valueShare;
     const sale = l.part.kawadojo_price || 0;
-    const unitProfitCop = sale - unitLandedCop;
+    const unitProfitCop = Math.round(sale - unitCost);
     return {
       part: l.part,
       quantity: l.quantity,
       unitPieceCop: Math.round(unitPieceCop),
-      unitLandedCop,
+      unitCostCop: Math.round(unitCost),
       unitProfitCop,
       marginPct: sale > 0 ? (unitProfitCop / sale) * 100 : 0,
+      unitLandedCop: Math.round(unitCost + carrierFeesCop * valueShare),
     };
   });
+  const contributionCop = lineResults.reduce((sum, l) => sum + l.unitProfitCop * l.quantity, 0);
 
   return {
     units, subtotalUsd, subtotalYen, piezasCop, envioCop, requiresTaxes, arancelCop, ivaCop,
-    carrierFeesCop, taxesAndFeesCop, totalCop, totalUsd, ventasCop, utilidadCop, margenPct, lines: lineResults,
+    carrierFeesCop, taxesAndFeesCop, totalCop, totalUsd, ventasCop, utilidadCop, margenPct,
+    contributionCop, fixedFeesCop: carrierFeesCop, lines: lineResults,
   };
 }
 

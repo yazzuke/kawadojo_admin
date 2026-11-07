@@ -15,13 +15,15 @@ import {
   ReceiptJapaneseYen,
   BookOpen,
   Sparkles,
-  Calculator
+  Calculator,
+  Layers
 } from 'lucide-react';
 import { useState } from 'react';
 
 const navItems = [
   { to: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
   { to: '/products', icon: Package, label: 'Productos' },
+  { to: '/fichas', icon: Layers, label: 'Fichas' },
   { to: '/categories', icon: Tags, label: 'Categorías' },
   { to: '/models', icon: Bike, label: 'Modelos' },
   { to: '/batches', icon: ShipWheel, label: 'Lotes' },

@@ -1,11 +1,13 @@
 import { useEffect, useMemo, useState } from 'react';
 import toast from 'react-hot-toast';
-import { Loader2, RefreshCw, Search, Sparkles, X } from 'lucide-react';
+import { Bike, Loader2, RefreshCw, Search, Sparkles, X } from 'lucide-react';
 import { impexService } from '../services/Impex';
 import { categoryService } from '../services/categoryService';
 import type { Category } from '../types/product';
 import type { ImpexCategorySuggestion, SavedImpexPart } from '../types/impex';
 import CatalogAskPanel from './CatalogAskPanel';
+import ModelSuggestPanel from './ModelSuggestPanel';
+import { aiService, type CompatSuggestion } from '../services/aiService';
 
 interface Props {
   onEdit: (part: SavedImpexPart) => void;
@@ -32,6 +34,22 @@ const sourceLabel: Record<NonNullable<ImpexCategorySuggestion['source']>, { text
 
 export default function SavedPartsTab({ onEdit, onSearchPart, exchangeRate, usdExchangeRate, refreshTrigger }: Props) {
   const [askOpen, setAskOpen] = useState(false);
+  const [modelSuggestions, setModelSuggestions] = useState<CompatSuggestion[] | null>(null);
+  const [suggestingModels, setSuggestingModels] = useState(false);
+
+  // La IA propone motos para las piezas que no tienen ninguna (no guarda nada hasta revisar)
+  const runModelSuggest = async () => {
+    try {
+      setSuggestingModels(true);
+      const data = await aiService.suggest('impex', true);
+      setModelSuggestions(data);
+      if (!data.length) toast.success('Todas las piezas tienen moto');
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || 'Error sugiriendo motos');
+    } finally {
+      setSuggestingModels(false);
+    }
+  };
   const [parts, setParts] = useState<SavedImpexPart[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
@@ -152,6 +170,7 @@ export default function SavedPartsTab({ onEdit, onSearchPart, exchangeRate, usdE
     (!t || [p.name_es, p.name_en, p.name_ja, p.part_no].some(v => (v || '').toLowerCase().includes(t)))
   );
   const missing = counts.get(NONE) || 0;
+  const noModelCount = parts.filter(p => !(p.compatibility || []).length).length;
 
   if (loading) {
     return (
@@ -195,6 +214,15 @@ export default function SavedPartsTab({ onEdit, onSearchPart, exchangeRate, usdE
 
   return (
     <div className="space-y-4">
+      {/* Motos propuestas por la IA */}
+      {modelSuggestions && modelSuggestions.length > 0 && (
+        <ModelSuggestPanel
+          suggestions={modelSuggestions}
+          onClose={() => setModelSuggestions(null)}
+          onApplied={() => { setModelSuggestions(null); fetchAll(); }}
+        />
+      )}
+
       {/* Clasificación automática */}
       {suggestions && suggestions.length > 0 && (
         <div className="bg-kawa-gray border border-purple-500/40 rounded-xl overflow-hidden">
@@ -269,6 +297,15 @@ export default function SavedPartsTab({ onEdit, onSearchPart, exchangeRate, usdE
               className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-semibold disabled:opacity-40 ${askOpen ? 'bg-purple-500 text-white' : 'bg-purple-500/15 text-purple-200 border border-purple-500/50 hover:border-purple-400'}`}
             >
               <Sparkles size={15} /> Preguntar a la IA ({visible.length})
+            </button>
+            <button
+              onClick={runModelSuggest}
+              disabled={suggestingModels || noModelCount === 0}
+              title={noModelCount === 0 ? 'Todas tienen moto' : 'Propone motos para las piezas que no tienen ninguna'}
+              className="flex items-center gap-2 bg-[#1e1e1e] border border-blue-500/50 text-blue-200 px-3 py-2 rounded-lg hover:border-blue-400 disabled:opacity-40 text-sm"
+            >
+              {suggestingModels ? <Loader2 size={15} className="animate-spin" /> : <Bike size={15} />}
+              Asignar motos ({noModelCount})
             </button>
             <button
               onClick={runSuggest}

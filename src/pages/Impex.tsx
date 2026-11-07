@@ -218,6 +218,11 @@ const Impex: React.FC = () => {
       toast.error('El nombre en español es requerido');
       return;
     }
+    // Sin moto la pieza no aparece en los filtros, en el armador ni en los kits de la IA
+    if (!formData.compatible_moto_models?.length
+      && !window.confirm('Esta pieza no tiene ninguna moto asignada, así que no va a salir al filtrar por moto ni en los kits de la IA. ¿Guardar igual?')) {
+      return;
+    }
     
     setIsModalOpen(false); // Close while saving to avoid double clicks
     try {

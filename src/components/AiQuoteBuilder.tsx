@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import toast from 'react-hot-toast';
-import { AlertTriangle, CheckCircle2, Loader2, Plus, Replace, Search, Send, Sparkles, X, XCircle } from 'lucide-react';
+import { AlertTriangle, CheckCircle2, ChevronDown, ChevronUp, Loader2, Plus, Replace, Search, Send, Sparkles, X, XCircle } from 'lucide-react';
 import { aiService, type CatalogSuggestion, type QuoteProposal } from '../services/aiService';
 import type { SavedImpexPart } from '../types/impex';
 import { formatUsd, TAX_FREE_LIMIT_USD, type QuoteLine } from '../Utils/impexQuoteCalc';
@@ -14,6 +14,7 @@ interface Props {
 
 // La IA arma una cotización con las piezas guardadas a partir de un pedido en palabras
 export default function AiQuoteBuilder({ parts, hasCart, onLoad }: Props) {
+  const [open, setOpen] = useState(false); // Oculto por defecto; se abre con un clic
   const [request, setRequest] = useState('');
   const [underLimit, setUnderLimit] = useState(true);
   const [loading, setLoading] = useState(false);
@@ -65,6 +66,20 @@ export default function AiQuoteBuilder({ parts, hasCart, onLoad }: Props) {
     );
   };
 
+  if (!open) {
+    return (
+      <button
+        onClick={() => setOpen(true)}
+        className="w-full flex items-center gap-2 px-4 py-2.5 rounded-xl border border-dashed border-purple-500/40 bg-[#161616] text-left text-sm hover:border-purple-400 transition-colors"
+      >
+        <Sparkles size={16} className="text-purple-400" />
+        <span className="text-white font-semibold">Armar con IA</span>
+        <span className="text-gray-500 text-xs hidden sm:inline">Pide un kit (ej. empaques Ninja 300) y la IA lo arma con tus piezas guardadas</span>
+        <ChevronDown size={16} className="ml-auto text-gray-400" />
+      </button>
+    );
+  }
+
   return (
     <section className="bg-[#161616] border border-purple-500/40 rounded-xl">
       <div className="p-4 space-y-3">
@@ -74,6 +89,9 @@ export default function AiQuoteBuilder({ parts, hasCart, onLoad }: Props) {
             <input type="checkbox" checked={underLimit} onChange={e => setUnderLimit(e.target.checked)} className="w-4 h-4 accent-[#62BE1B]" />
             Que no pase de US$ {TAX_FREE_LIMIT_USD}
           </label>
+          <button onClick={() => setOpen(false)} title="Ocultar" className="text-gray-400 hover:text-white p-1 ml-1">
+            <ChevronUp size={16} />
+          </button>
         </div>
         <form onSubmit={e => { e.preventDefault(); build(request); }} className="flex gap-2">
           <input

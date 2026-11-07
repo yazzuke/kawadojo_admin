@@ -35,7 +35,19 @@ export interface CatalogSuggestion {
   saved_as?: { part_no: string; name: string } | null;
 }
 
+export interface QuoteProposal {
+  notes: string;
+  items: Array<{ part_id: string; quantity: number; reason: string }>;
+  missing: CatalogSuggestion[];
+  subtotal_usd: number;
+  over_limit: boolean;
+}
+
 export const aiService = {
+  buildQuote: async (request: string, limitUsd: number | null): Promise<QuoteProposal> => {
+    const response = await api.post('/ai/quote/build', { request, limit_usd: limitUsd }, { timeout: 180_000 });
+    return response.data.data;
+  },
   askCatalog: async (
     question: string,
     partIds: string[],

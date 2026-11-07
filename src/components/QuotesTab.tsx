@@ -6,6 +6,7 @@ import type { SavedImpexPart, ImpexQuote } from '../types/impex';
 import QuoteComparator, { type QuoteDraft } from './QuoteComparator';
 import QuoteHistory from './QuoteHistory';
 import OrderBuilder from './OrderBuilder';
+import AiQuoteBuilder from './AiQuoteBuilder';
 import ImpexShippingPicker, { ShippingModeToggle } from './ImpexShippingPicker';
 import {
   buildQuotePayload, computeShipment, formatCop, formatUsd, newDraftId, TAX_FREE_LIMIT_USD,
@@ -238,6 +239,27 @@ const QuotesTab = ({
         <div className="p-4 md:p-6 grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_380px] gap-6">
           {/* Columna principal */}
           <div className="space-y-6 min-w-0">
+            <AiQuoteBuilder
+              parts={savedParts}
+              hasCart={cart.length > 0}
+              onLoad={(lines, mode) => {
+                const incoming = lines.map(l => ({ ...l.part, quantity: l.quantity }));
+                if (mode === 'replace') {
+                  setCart(incoming);
+                } else {
+                  // Suma cantidades si la pieza ya estaba en la cotización
+                  setCart(prev => {
+                    const next = prev.map(c => {
+                      const extra = incoming.find(i => i.id === c.id);
+                      return extra ? { ...c, quantity: c.quantity + extra.quantity } : c;
+                    });
+                    return [...next, ...incoming.filter(i => !prev.some(c => c.id === i.id))];
+                  });
+                }
+                toast.success(`${lines.length} piezas cargadas en la cotización`);
+              }}
+            />
+
             {/* Catálogo */}
             <section className="bg-[#161616] border border-gray-800 rounded-xl">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 border-b border-gray-800">

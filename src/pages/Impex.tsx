@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import type { ImpexResponse } from '../types/impex';
 import { impexService } from '../services/Impex';
 import NavBarImpex from '../components/NavBarImpex';
@@ -151,6 +152,17 @@ const Impex: React.FC = () => {
   useEffect(() => {
     fetchModels();
   }, []);
+
+  // /impex?buscar=11061-1477 abre la consulta con ese código ya buscado (lo usan las sugerencias de la IA)
+  const [searchParams, setSearchParams] = useSearchParams();
+  useEffect(() => {
+    const code = searchParams.get('buscar');
+    if (code) {
+      searchInImpex(code);
+      setSearchParams({}, { replace: true });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams]);
 
   const handleOpenSaveModal = (part: any) => {
     setModalType('save');

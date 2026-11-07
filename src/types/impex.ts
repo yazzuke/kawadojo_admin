@@ -45,6 +45,7 @@ export interface ImpexSavePayload {
   margin: number;
   compatible_moto_models?: string[];
   base_product_id?: string | null;
+  master_id?: string | null;
 }
 
 export interface SavedImpexPart {
@@ -68,6 +69,8 @@ export interface SavedImpexPart {
   compatible_moto_models?: string[];
   base_product_id?: string | null;
   base_product?: { id: string; name: string; } | null;
+  master_id?: string | null;
+  master?: { id: string; name: string } | null;
   created_at?: string;
   updated_at?: string;
 }
@@ -104,6 +107,7 @@ export interface ImpexQuote {
   id?: string;
   quote_number?: string;
   status?: string;
+  batch_number?: string | null; // Lote que salió de esta cotización
   
   exchange_rate_jpy_cop: number;
   exchange_rate_usd_jpy: number;
@@ -128,3 +132,14 @@ export interface ImpexQuote {
   
   items: ImpexQuoteItem[];
 }
+
+// Ficha sugerida para una pieza de Impex sin ficha
+export interface MasterSuggestion {
+  part_id: string;
+  part_no: string;
+  part_name: string | null;
+  master: { id: string; name: string };
+  reason: 'codigo' | 'producto_base';
+}
+
+export interface MasterOption { id: string; name: string; oem_code: string | null }

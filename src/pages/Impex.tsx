@@ -138,6 +138,8 @@ const Impex: React.FC = () => {
     compatible_moto_models: [] as string[],
     base_product_id: null as string | null | undefined,
     base_product: null as { id: string; name: string } | null | undefined,
+    master_id: null as string | null | undefined,
+    master: null as { id: string; name: string } | null | undefined,
   });
 
   const fetchModels = async () => {
@@ -183,6 +185,8 @@ const Impex: React.FC = () => {
       compatible_moto_models: [],
       base_product_id: null,
       base_product: null,
+      master_id: null,
+      master: null,
     });
     setIsModalOpen(true);
   };
@@ -209,6 +213,8 @@ const Impex: React.FC = () => {
         || (part.compatibility || []).map((c: any) => c.moto_models?.id || c.moto_model_id).filter(Boolean),
       base_product_id: part.base_product_id || null,
       base_product: part.base_product || null,
+      master_id: part.master_id || null,
+      master: part.master || null,
     });
     setIsModalOpen(true);
   };
@@ -243,6 +249,7 @@ const Impex: React.FC = () => {
           margin: formData.margin,
           compatible_moto_models: formData.compatible_moto_models,
           base_product_id: formData.base_product_id,
+          master_id: formData.master_id ?? null,
         });
         toast.success('Repuesto guardado correctamente');
       } else if (modalType === 'edit') {
@@ -263,6 +270,7 @@ const Impex: React.FC = () => {
           margin: formData.margin,
           compatible_moto_models: formData.compatible_moto_models,
           base_product_id: formData.base_product_id,
+          master_id: formData.master_id ?? null,
         });
         toast.success('Repuesto actualizado correctamente');
       }

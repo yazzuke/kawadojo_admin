@@ -1,5 +1,5 @@
 import api from './api';
-import type { ImpexCategorySuggestion, ImpexResponse, ImpexSavePayload, ImpexShippingOption, SavedImpexPart } from '../types/impex';
+import type { ImpexCategorySuggestion, ImpexResponse, ImpexSavePayload, ImpexShippingOption, MasterOption, MasterSuggestion, SavedImpexPart } from '../types/impex';
 
 export const impexService = {
   savePart: async (payload: ImpexSavePayload): Promise<any> => {
@@ -61,8 +61,22 @@ export const impexService = {
     const response = await api.get('/quotes');
     return response.data;
   },
-  convertQuoteToBatch: async (id: string): Promise<any> => {
-    const response = await api.post(`/quotes/${id}/convert`);
+  // Fichas sugeridas para piezas sin ficha + todas las fichas para el selector
+  masterSuggestions: async (): Promise<{ suggestions: MasterSuggestion[]; masters: MasterOption[] }> => {
+    const response = await api.get('/impex/master-suggestions');
+    return response.data.data;
+  },
+  linkMasters: async (links: Array<{ part_id: string; master_id: string | null }>): Promise<{ updated: number }> => {
+    const response = await api.put('/impex/link-masters', { links });
+    return response.data.data;
+  },
+  // Qué productos saldrían en el lote; no guarda nada
+  previewBatch: async (id: string): Promise<BatchPreview> => {
+    const response = await api.get(`/quotes/${id}/batch-preview`, { timeout: 60_000 });
+    return response.data.data;
+  },
+  convertQuoteToBatch: async (id: string): Promise<{ success: boolean; data: { batch_number: string; products_created: number } }> => {
+    const response = await api.post(`/quotes/${id}/convert`, undefined, { timeout: 90_000 });
     return response.data;
   },
   deleteQuote: async (id: string): Promise<any> => {
@@ -70,3 +84,30 @@ export const impexService = {
     return response.data;
   }
 };
+
+export interface PlannedBatchProduct {
+  impex_part_id: string | null;
+  part_no: string | null;
+  template: 'ficha' | 'producto' | 'impex';
+  name: string;
+  price: number;
+  cost: number;
+  condition: string;
+  category_name: string | null;
+  group_tag: string | null;
+  oem_code: string | null;
+  master_id: string | null;
+  master_name: string | null;
+  models: Array<{ id: string; name: string }>;
+  photos: Array<{ url: string; is_primary: boolean; sort_order: number }>;
+  warnings: string[];
+}
+
+export interface BatchPreview {
+  quote_number: string;
+  already_converted: boolean;
+  existing_batch: string | null;
+  batch_number: string;
+  costs: { purchase_total_cost: number; shipping_cost: number; customs_fees: number; additional_fees: number; total_cost: number };
+  products: PlannedBatchProduct[];
+}

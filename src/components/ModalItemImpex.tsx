@@ -9,9 +9,12 @@ import {
   Banknote,
   TrendingUp,
   Percent,
-  Link as LinkIcon
+  Link as LinkIcon,
+  Layers
 } from 'lucide-react';
 import { productService } from '../services/productService';
+import { impexService } from '../services/Impex';
+import type { MasterOption } from '../types/impex';
 import ProductSelectorModal from './ProductSelectorModal';
 
 // 1. Definimos las interfaces para evitar el error de 'any'
@@ -37,7 +40,11 @@ interface FormData {
   compatible_moto_models: string[];
   base_product_id?: string | null;
   base_product?: { id: string; name: string } | null;
+  master_id?: string | null;
+  master?: { id: string; name: string } | null;
 }
+
+const codeKey = (s: string | null | undefined) => (s || '').replace(/[^A-Za-z0-9]/g, '').toUpperCase();
 
 interface ModalItemImpexProps {
   isOpen: boolean;
@@ -64,16 +71,33 @@ const ModalItemImpex: React.FC<ModalItemImpexProps> = ({
 }) => {
   const [isProductSelectorOpen, setIsProductSelectorOpen] = useState(false);
   const [products, setProducts] = useState<any[]>([]);
+  const [masters, setMasters] = useState<MasterOption[]>([]);
+  const [masterText, setMasterText] = useState('');
+  const [mastersFailed, setMastersFailed] = useState(false);
 
   useEffect(() => {
     if (isOpen) {
       productService.getAll().then((data: any[]) => {
         setProducts(data);
       });
+      // Si falla (p. ej. el servidor aún no tiene esta función) se dice, en vez de decir que no hay fichas
+      impexService.masterSuggestions()
+        .then(r => { setMasters(r.masters); setMastersFailed(false); })
+        .catch(() => { setMasters([]); setMastersFailed(true); });
     }
   }, [isOpen]);
 
   if (!isOpen) return null;
+
+  // Ficha con el mismo código que la pieza (si no tiene una ya)
+  const suggestedMaster = !formData.master_id
+    ? masters.find(m => m.oem_code && [codeKey(formData.part_no), codeKey(formData.part_no_raw)].includes(codeKey(m.oem_code)))
+    : undefined;
+  const masterLabel = (m: MasterOption) => (m.oem_code ? `${m.name} · ${m.oem_code}` : m.name);
+  const setMaster = (m: { id: string; name: string } | null) => {
+    if (!m) setMasterText('');
+    onFormDataChange({ ...formData, master_id: m?.id ?? null, master: m });
+  };
 
   const copCost = (formData.price_yen || 0) * (Number(exchangeRate) || 0);
 
@@ -101,12 +125,57 @@ const ModalItemImpex: React.FC<ModalItemImpexProps> = ({
 
         <div className="p-6 space-y-8">
 
+          {/* Sección: Ficha de producto (de aquí sale el producto al armar el lote) */}
+          <div className="bg-[#1e1e1e]/40 border border-kawa-green/30 rounded-xl p-4 space-y-3">
+            <div className="flex items-center gap-2">
+              <Layers className="w-5 h-5 text-kawa-green" />
+              <h3 className="text-sm font-semibold text-kawa-green tracking-wide">Ficha de producto</h3>
+            </div>
+            <p className="text-xs text-gray-400">
+              Al convertir una cotización en lote, cada unidad sale con el nombre, la descripción, la categoría, el tag y las fotos de esta ficha.
+            </p>
+            {formData.master ? (
+              <div className="flex items-center justify-between bg-black/40 rounded-lg p-3 border border-kawa-green/40">
+                <p className="text-sm font-medium text-white">{formData.master.name}</p>
+                <button onClick={() => setMaster(null)} title="Quitar ficha" className="text-red-400 hover:text-red-300 p-1"><X className="w-4 h-4" /></button>
+              </div>
+            ) : (
+              <>
+                {suggestedMaster && (
+                  <button
+                    onClick={() => setMaster({ id: suggestedMaster.id, name: suggestedMaster.name })}
+                    className="w-full text-left text-xs bg-kawa-green/10 border border-kawa-green/40 text-kawa-green rounded-lg px-3 py-2 hover:bg-kawa-green/20"
+                  >
+                    Mismo código que la ficha <span className="font-semibold">{suggestedMaster.name}</span> · toca para vincular
+                  </button>
+                )}
+                <input
+                  list="impex-master-options"
+                  value={masterText}
+                  disabled={mastersFailed}
+                  placeholder={mastersFailed
+                    ? 'No se pudieron cargar las fichas (¿el servidor ya tiene la versión nueva?)'
+                    : masters.length ? 'Busca la ficha por nombre o código' : 'Todavía no hay fichas creadas'}
+                  onChange={e => {
+                    setMasterText(e.target.value);
+                    const found = masters.find(m => masterLabel(m) === e.target.value);
+                    if (found) setMaster({ id: found.id, name: found.name });
+                  }}
+                  className={inputClassName}
+                />
+                <datalist id="impex-master-options">
+                  {masters.map(m => <option key={m.id} value={masterLabel(m)} />)}
+                </datalist>
+              </>
+            )}
+          </div>
+
           {/* Sección: Vinculación con Catálogo (Plantilla) */}
           <div className="bg-[#1e1e1e]/40 border border-kawa-green/20 rounded-xl p-4">
             <div className="flex items-center justify-between mb-2">
               <div className="flex items-center gap-2">
                 <LinkIcon className="w-5 h-5 text-kawa-green" />
-                <h3 className="text-sm font-semibold text-kawa-green tracking-wide">Vinculación de Catálogo</h3>
+                <h3 className="text-sm font-semibold text-kawa-green tracking-wide">Producto base (respaldo)</h3>
               </div>
               <button
                 onClick={() => setIsProductSelectorOpen(true)}
@@ -123,7 +192,7 @@ const ModalItemImpex: React.FC<ModalItemImpexProps> = ({
                   </div>
                   <div>
                     <p className="text-sm font-medium text-white">{formData.base_product.name}</p>
-                    <p className="text-xs text-gray-400">Este producto se usará como plantilla al convertir a Lote.</p>
+                    <p className="text-xs text-gray-400">{formData.master ? 'No se usa: manda la ficha.' : 'Se usa como plantilla al convertir a lote.'}</p>
                   </div>
                 </div>
                 <button 
@@ -135,7 +204,7 @@ const ModalItemImpex: React.FC<ModalItemImpexProps> = ({
               </div>
             ) : (
               <p className="text-xs text-gray-400 mt-2">
-                Opcional: Vincula este repuesto a un producto de tu catálogo. Al generar un lote, se clonarán todos los datos (descripción, categoría, tags, compatibilidad) automáticamente.
+                Opcional. Solo se usa si la pieza no tiene ficha: el lote copia los datos de este producto.
               </p>
             )}
           </div>

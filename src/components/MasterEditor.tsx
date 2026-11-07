@@ -1,6 +1,6 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import toast from 'react-hot-toast';
-import { AlertTriangle, ArrowRight, Check, ImageOff, Loader2 } from 'lucide-react';
+import { AlertTriangle, ArrowRight, Check, ImageOff, ImagePlus, Loader2 } from 'lucide-react';
 import type { Category } from '../types/product';
 import {
   apiError, composeName, productMasterService, tagFromName,
@@ -73,7 +73,14 @@ const Section = ({ title, children }: { title: string; children: React.ReactNode
 );
 
 // Arma la ficha maestra de un grupo: eliges el nombre, la descripción y las fotos buenas, y qué se aplica a los productos
-export default function MasterEditor({ products, options, categories, initial, submitLabel, onDone }: Props) {
+const MAX_PHOTO_MB = 5;
+
+export default function MasterEditor({ products: rawProducts, options, categories, initial, submitLabel, onDone }: Props) {
+  // Fotos subidas aquí: se ven sin recargar la página
+  const [photoOverrides, setPhotoOverrides] = useState<Record<string, { image_count: number; image: string | null }>>({});
+  const products = useMemo(() => rawProducts.map(p => ({ ...p, ...photoOverrides[p.id] })), [rawProducts, photoOverrides]);
+  const [uploading, setUploading] = useState(false);
+  const fileInput = useRef<HTMLInputElement>(null);
   const [name, setName] = useState(initial?.name ?? options.names[0]?.value ?? '');
   const [description, setDescription] = useState(initial?.description ?? options.descriptions[0]?.value ?? '');
   const [fullDescription, setFullDescription] = useState(initial?.full_description ?? options.full_descriptions[0]?.value ?? '');
@@ -91,6 +98,7 @@ export default function MasterEditor({ products, options, categories, initial, s
     group_tag: true,
     models: options.models.length > 0,
     copy_photos: true,
+    replace_new_photos: false,
   });
   const [saving, setSaving] = useState(false);
 
@@ -101,6 +109,11 @@ export default function MasterEditor({ products, options, categories, initial, s
     () => chosen.filter(p => composeName(name, p) !== p.name.trim().replace(/\s+/g, ' ')).length,
     [chosen, name],
   );
+  const replaceable = chosen.filter(p => p.condition === 'nuevo' && p.image_count > 0 && p.id !== photoId).length;
+  // A qué producto se suben las fotos: el que da las fotos a la ficha, o uno nuevo en stock del grupo
+  const uploadTarget = products.find(p => p.id === photoId)
+    ?? chosen.find(p => p.condition === 'nuevo' && p.in_stock && !p.is_incoming)
+    ?? chosen[0] ?? products[0];
   const photoProducts = products.filter(p => p.image_count > 0).sort((a, b) => b.image_count - a.image_count).slice(0, 12);
 
   const toggleProduct = (id: string) => setSelected(prev => {
@@ -114,6 +127,26 @@ export default function MasterEditor({ products, options, categories, initial, s
     return next;
   });
 
+  const uploadPhotos = async (list: FileList | null) => {
+    const files = Array.from(list || []);
+    if (fileInput.current) fileInput.current.value = '';
+    if (!files.length || !uploadTarget) return;
+    const big = files.filter(f => f.size > MAX_PHOTO_MB * 1024 * 1024);
+    if (big.length) { toast.error(`Cada foto puede pesar máximo ${MAX_PHOTO_MB} MB (${big.map(f => f.name).join(', ')})`); return; }
+    if (files.length > 10) { toast.error('Máximo 10 fotos por vez'); return; }
+    try {
+      setUploading(true);
+      const res = await productMasterService.addPhotos(uploadTarget.id, files, true);
+      setPhotoOverrides(prev => ({ ...prev, [res.product_id]: { image_count: res.image_count, image: res.image } }));
+      setPhotoId(res.product_id);
+      toast.success(`${files.length === 1 ? 'Foto subida' : `${files.length} fotos subidas`} a "${uploadTarget.name}"`);
+    } catch (err) {
+      toast.error(apiError(err, 'No se pudieron subir las fotos'));
+    } finally {
+      setUploading(false);
+    }
+  };
+
   const submit = async () => {
     if (!name.trim()) { toast.error('Ponle un nombre a la ficha'); return; }
     if (!chosen.length) { toast.error('Marca al menos un producto'); return; }
@@ -122,6 +155,7 @@ export default function MasterEditor({ products, options, categories, initial, s
       apply.description ? 'poner la misma descripción' : null,
       apply.models ? 'poner las mismas motos' : null,
       apply.copy_photos && photoId && withoutPhoto ? `copiar fotos a ${withoutPhoto}` : null,
+      apply.copy_photos && apply.replace_new_photos && photoId && replaceable ? `cambiar las fotos de ${replaceable} nuevos` : null,
     ].filter(Boolean);
     if (!confirm(`Se va a vincular ${chosen.length} productos a la ficha "${name.trim()}"${parts.length ? ` y ${parts.join(', ')}` : ''}. ¿Continuar?`)) return;
     try {
@@ -137,7 +171,7 @@ export default function MasterEditor({ products, options, categories, initial, s
         photo_product_id: photoId || null,
         model_ids: [...modelIds],
         product_ids: chosen.map(p => p.id),
-        apply: { ...apply, copy_photos: apply.copy_photos && !!photoId },
+        apply: { ...apply, copy_photos: apply.copy_photos && !!photoId, replace_new_photos: apply.copy_photos && apply.replace_new_photos && !!photoId },
       });
       toast.success(`Ficha lista · ${res.linked} productos${res.renamed ? ` · ${res.renamed} renombrados` : ''}${res.photos_copied ? ` · fotos en ${res.photos_copied}` : ''}`);
       onDone();
@@ -256,6 +290,30 @@ export default function MasterEditor({ products, options, categories, initial, s
           ) : (
             <p className="text-sm text-gray-500">Ningún producto del grupo tiene fotos todavía.</p>
           )}
+          {uploadTarget && (
+            <div className="flex flex-wrap items-center gap-2">
+              <button
+                type="button"
+                onClick={() => fileInput.current?.click()}
+                disabled={uploading}
+                className="flex items-center gap-1.5 text-xs text-gray-200 hover:text-kawa-green px-3 py-1.5 border border-gray-700 hover:border-kawa-green rounded-lg disabled:opacity-50"
+              >
+                {uploading ? <Loader2 size={13} className="animate-spin" /> : <ImagePlus size={13} />}
+                {uploading ? 'Subiendo...' : 'Agregar fotos'}
+              </button>
+              <span className="text-[11px] text-gray-500">
+                Se suben a "{uploadTarget.name}" y quedan de primeras. Luego se copian a los demás con la opción de abajo.
+              </span>
+              <input
+                ref={fileInput}
+                type="file"
+                accept="image/jpeg,image/png,image/webp"
+                multiple
+                className="hidden"
+                onChange={e => uploadPhotos(e.target.files)}
+              />
+            </div>
+          )}
         </Section>
       </div>
 
@@ -308,6 +366,16 @@ export default function MasterEditor({ products, options, categories, initial, s
               label={`Copiar las fotos a los que no tienen (${photoId ? withoutPhoto : 0})`}
               hint="Los que ya tienen fotos las conservan (sirve para los usados con foto propia)"
             />
+            {apply.copy_photos && (
+              <div className="pl-6">
+                <Toggle
+                  checked={apply.replace_new_photos}
+                  onChange={v => setApply(a => ({ ...a, replace_new_photos: v }))}
+                  label={`Cambiar también las fotos de los nuevos (${photoId ? replaceable : 0})`}
+                  hint="Los nuevos que ya tienen foto quedan con las de la ficha. Los usados no se tocan."
+                />
+              </div>
+            )}
           </div>
         </Section>
 

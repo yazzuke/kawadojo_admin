@@ -16,7 +16,8 @@ import {
   BookOpen,
   Sparkles,
   Calculator,
-  Layers
+  Layers,
+  Inbox
 } from 'lucide-react';
 import { useState } from 'react';
 
@@ -28,6 +29,7 @@ const navItems = [
   { to: '/models', icon: Bike, label: 'Modelos' },
   { to: '/batches', icon: ShipWheel, label: 'Lotes' },
   { to: '/orders', icon: ShoppingBag, label: 'Órdenes' },
+  { to: '/solicitudes', icon: Inbox, label: 'Pedidos de clientes' },
   { to: '/financial', icon: TrendingUp, label: 'Finanzas' },
   { to: '/reviews', icon: MessageSquare, label: 'Reseñas' },
   { to: '/users', icon: LayoutDashboard, label: 'Usuarios' },

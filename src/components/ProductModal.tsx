@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react';
-import { X, Upload, Loader2 } from 'lucide-react';
+import { X, Upload, Loader2, Layers } from 'lucide-react';
 import { productService } from '../services/productService';
 import { categoryService } from '../services/categoryService';
 import { modelService } from '../services/modelService';
 import type { Product, Category, CompatibleModel, CreateProductData } from '../types/product';
+import { composeName, productMasterService, type ProductMaster } from '../services/productMasterService';
 
 interface ProductModalProps {
   product: Product | null;
@@ -41,6 +42,45 @@ export default function ProductModal({ product, initialData, onClose, onSuccess 
   const [deletedImageIds, setDeletedImageIds] = useState<string[]>([]);
   const [isLoadingImages, setIsLoadingImages] = useState(false);
   const [corsImageUrls, setCorsImageUrls] = useState<string[]>([]);
+
+  // Crear desde una ficha: llena los datos de la pieza y usa sus fotos
+  const [masters, setMasters] = useState<ProductMaster[]>([]);
+  const [master, setMaster] = useState<ProductMaster | null>(null);
+  const [lotSuffix, setLotSuffix] = useState('');
+  const [copyMasterPhotos, setCopyMasterPhotos] = useState(true);
+  const masterPhoto = master?.products.find(p => p.id === master.photo_product_id) ?? null;
+
+  useEffect(() => {
+    if (product) return;
+    productMasterService.list().then(setMasters).catch(() => setMasters([]));
+  }, [product]);
+
+  const nameFromMaster = (m: ProductMaster, condition: string, suffix: string) =>
+    composeName(m.name, { prefix: null, suffix: suffix.trim() || null, condition });
+
+  const chooseMaster = (id: string) => {
+    const m = masters.find(x => x.id === id) ?? null;
+    setMaster(m);
+    if (!m) return;
+    const name = nameFromMaster(m, formData.condition, lotSuffix);
+    setFormData(f => ({
+      ...f,
+      name,
+      slug: generateSlug(name),
+      description: m.description || f.description,
+      category_id: m.category?.id || f.category_id,
+      group_tag: m.group_tag || f.group_tag,
+      oem_code: m.oem_code || f.oem_code,
+      compatible_models: m.options.models.length ? m.options.models.map(x => x.id) : f.compatible_models,
+    }));
+  };
+
+  // Con ficha, el nombre se arma solo: ficha + lote (a los usados no se les pone "NUEVO SELLADO")
+  const refreshMasterName = (condition: string, suffix: string) => {
+    if (!master) return;
+    const name = nameFromMaster(master, condition, suffix);
+    setFormData(f => ({ ...f, condition: condition as 'nuevo' | 'usado', name, slug: generateSlug(name) }));
+  };
 
   useEffect(() => {
     loadData();
@@ -201,6 +241,11 @@ export default function ProductModal({ product, initialData, onClose, onSuccess 
         compatible_models: formData.compatible_models,
         images: images,
         deleted_images: deletedImageIds.length > 0 ? deletedImageIds : undefined,
+        ...(!product && master && {
+          master_id: master.id,
+          full_description: master.full_description || undefined,
+          copy_master_photos: copyMasterPhotos && images.length === 0,
+        }),
       };
 
       if (product) {
@@ -240,6 +285,53 @@ export default function ProductModal({ product, initialData, onClose, onSuccess 
           {error && (
             <div className="p-3 bg-red-500/10 border border-red-500/50 rounded-lg text-red-400 text-sm">
               {error}
+            </div>
+          )}
+
+          {/* Desde una ficha: llena todo y usa sus fotos */}
+          {!product && masters.length > 0 && (
+            <div className="p-4 rounded-lg border border-kawa-green/30 bg-kawa-green/5 space-y-3">
+              <div className="flex items-center gap-2">
+                <Layers size={16} className="text-kawa-green" />
+                <span className="text-sm font-semibold text-kawa-green">Desde una ficha</span>
+                <span className="text-xs text-gray-500">(opcional)</span>
+              </div>
+              <select
+                value={master?.id ?? ''}
+                onChange={(e) => chooseMaster(e.target.value)}
+                className="w-full px-4 py-2 bg-kawa-black border border-gray-700 rounded-lg text-white focus:outline-none focus:border-kawa-green"
+              >
+                <option value="">Sin ficha: llenar todo a mano</option>
+                {masters.map(m => <option key={m.id} value={m.id}>{m.name}{m.oem_code ? ` · ${m.oem_code}` : ''}</option>)}
+              </select>
+              {master && (
+                <>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-xs text-gray-400 mb-1">Lote y unidad</label>
+                      <input
+                        value={lotSuffix}
+                        onChange={(e) => { setLotSuffix(e.target.value); refreshMasterName(formData.condition, e.target.value); }}
+                        placeholder="Ej: 075 o 075-02"
+                        className="w-full px-3 py-2 bg-kawa-black border border-gray-700 rounded-lg text-white font-mono text-sm focus:outline-none focus:border-kawa-green"
+                      />
+                    </div>
+                    <p className="text-[11px] text-gray-500 self-end">
+                      El nombre se arma solo: nombre de la ficha + lote. Descripción, categoría, tag, código OEM y motos ya quedaron llenos; puedes cambiarlos abajo.
+                    </p>
+                  </div>
+                  {masterPhoto?.image && (
+                    <label className="flex items-center gap-3 text-sm text-gray-200 cursor-pointer">
+                      <input type="checkbox" checked={copyMasterPhotos} onChange={(e) => setCopyMasterPhotos(e.target.checked)} className="w-4 h-4 accent-[#62BE1B]" />
+                      <img src={masterPhoto.image} alt="" className="w-10 h-10 rounded object-cover bg-gray-800" />
+                      <span>
+                        Usar las fotos de la ficha ({masterPhoto.image_count})
+                        <span className="block text-[11px] text-gray-500">Si subes fotos abajo, se usan las tuyas en vez de estas</span>
+                      </span>
+                    </label>
+                  )}
+                </>
+              )}
             </div>
           )}
 
@@ -379,7 +471,9 @@ export default function ProductModal({ product, initialData, onClose, onSuccess 
               </label>
               <select
                 value={formData.condition}
-                onChange={(e) => setFormData({ ...formData, condition: e.target.value as 'nuevo' | 'usado' })}
+                onChange={(e) => (master
+                  ? refreshMasterName(e.target.value, lotSuffix)
+                  : setFormData({ ...formData, condition: e.target.value as 'nuevo' | 'usado' }))}
                 className="w-full px-4 py-2 bg-kawa-black border border-gray-700 rounded-lg text-white focus:outline-none focus:border-kawa-green"
               >
                 <option value="usado">Usado</option>

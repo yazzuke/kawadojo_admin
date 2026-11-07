@@ -168,7 +168,9 @@ export default function QuoteHistory({ quotes, isDeleting, isConverting, onDelet
                     <h4 className="text-white font-bold">{q.quote_number}</h4>
                     <span className="bg-gray-800 text-[11px] text-gray-300 px-2 py-0.5 rounded">{q.carrier || 'N/A'}</span>
                     {q.status === 'ordered' && (
-                      <span className="bg-kawa-green/15 text-kawa-green text-[11px] px-2 py-0.5 rounded">Convertida a lote</span>
+                      <span className="bg-kawa-green/15 text-kawa-green text-[11px] px-2 py-0.5 rounded">
+                        {q.batch_number ? `Ya es el ${q.batch_number}` : 'Convertida a lote'}
+                      </span>
                     )}
                   </div>
                   <p className="text-xs text-gray-500 mt-0.5">
@@ -249,14 +251,18 @@ export default function QuoteHistory({ quotes, isDeleting, isConverting, onDelet
               </div>
 
               <footer className="px-4 py-3 border-t border-gray-800 flex justify-end">
-                <button
-                  onClick={() => onConvert(id)}
-                  disabled={busy}
-                  className="flex items-center gap-2 bg-kawa-green text-black font-bold px-4 py-2 rounded-lg hover:bg-kawa-green-light text-sm disabled:opacity-50"
-                >
-                  {isConverting === id ? <Loader2 size={16} className="animate-spin" /> : <PackagePlus size={16} />}
-                  {isConverting === id ? 'Convirtiendo...' : 'Convertir a lote'}
-                </button>
+                {q.status === 'ordered' ? (
+                  <span className="text-xs text-gray-500 py-2">Ya se convirtió{q.batch_number ? ` en el ${q.batch_number}` : ' en lote'}</span>
+                ) : (
+                  <button
+                    onClick={() => onConvert(id)}
+                    disabled={busy}
+                    className="flex items-center gap-2 bg-kawa-green text-black font-bold px-4 py-2 rounded-lg hover:bg-kawa-green-light text-sm disabled:opacity-50"
+                  >
+                    {isConverting === id ? <Loader2 size={16} className="animate-spin" /> : <PackagePlus size={16} />}
+                    Convertir a lote
+                  </button>
+                )}
               </footer>
             </article>
           );

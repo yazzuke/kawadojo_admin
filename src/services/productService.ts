@@ -39,6 +39,9 @@ export const productService = {
     formData.append('category_id', data.category_id);
     if (data.group_tag) formData.append('group_tag', data.group_tag);
     if (data.oem_code) formData.append('oem_code', data.oem_code);
+    if (data.full_description) formData.append('full_description', data.full_description);
+    if (data.master_id) formData.append('master_id', data.master_id);
+    if (data.copy_master_photos) formData.append('copy_master_photos', 'true');
     
     // Compatible models es un array de IDs
     data.compatible_models.forEach((modelId) => {

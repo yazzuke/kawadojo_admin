@@ -7,6 +7,7 @@ import type { Category } from '../types/product';
 import type { ImpexCategorySuggestion, SavedImpexPart } from '../types/impex';
 import CatalogAskPanel from './CatalogAskPanel';
 import ModelSuggestPanel from './ModelSuggestPanel';
+import MasterLinkBanner from './MasterLinkBanner';
 import { aiService, type CompatSuggestion } from '../services/aiService';
 
 interface Props {
@@ -214,6 +215,9 @@ export default function SavedPartsTab({ onEdit, onSearchPart, exchangeRate, usdE
 
   return (
     <div className="space-y-4">
+      {/* Fichas que les corresponden a piezas sin ficha */}
+      <MasterLinkBanner refreshKey={refreshTrigger} onLinked={fetchAll} />
+
       {/* Motos propuestas por la IA */}
       {modelSuggestions && modelSuggestions.length > 0 && (
         <ModelSuggestPanel

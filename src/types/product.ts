@@ -90,6 +90,9 @@ export interface CreateProductData {
   compatible_models: string[];
   images: File[];
   deleted_images?: string[];
+  full_description?: string;
+  master_id?: string | null;      // Ficha de la pieza (solo al crear)
+  copy_master_photos?: boolean;   // Sin fotos propias: usar las de la ficha
 }
 
 export interface ResalePricingItem {

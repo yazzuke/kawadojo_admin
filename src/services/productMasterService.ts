@@ -75,6 +75,7 @@ export interface UnifyPayload {
     group_tag?: boolean;
     models?: boolean;
     copy_photos?: boolean;
+    replace_new_photos?: boolean;
   };
 }
 
@@ -89,6 +90,17 @@ export const productMasterService = {
   },
   async unify(payload: UnifyPayload): Promise<{ master_id: string; linked: number; renamed: number; photos_copied: number }> {
     const res = await api.post('/product-masters/unify', payload, { timeout: 90_000 });
+    return res.data.data;
+  },
+  // Sube fotos a un producto del grupo; con first quedan de primeras (la primera es la principal)
+  async addPhotos(productId: string, files: File[], first = true): Promise<{ product_id: string; image_count: number; image: string | null }> {
+    const form = new FormData();
+    files.forEach(f => form.append('images', f));
+    form.append('first', String(first));
+    const res = await api.post(`/product-masters/product/${productId}/photos`, form, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+      timeout: 120_000,
+    });
     return res.data.data;
   },
   async detach(productId: string) {

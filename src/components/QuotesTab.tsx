@@ -1,10 +1,11 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import toast from 'react-hot-toast';
 import { Search, X, Plus, Check, Trash2, AlertTriangle, GitCompare } from 'lucide-react';
 import { impexService } from '../services/Impex';
 import type { SavedImpexPart, ImpexQuote } from '../types/impex';
 import QuoteComparator, { type QuoteDraft } from './QuoteComparator';
 import QuoteHistory from './QuoteHistory';
+import BatchPreviewModal from './BatchPreviewModal';
 import OrderBuilder from './OrderBuilder';
 import AiQuoteBuilder from './AiQuoteBuilder';
 import ImpexShippingPicker, { ShippingModeToggle } from './ImpexShippingPicker';
@@ -38,7 +39,7 @@ const QuotesTab = ({
   const [loading, setLoading] = useState(true);
   const [quotes, setQuotes] = useState<ImpexQuote[]>([]);
   const [view, setView] = useState<View>('create');
-  const [isConverting, setIsConverting] = useState<string | null>(null);
+  const [previewId, setPreviewId] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState<string | null>(null);
 
   // Cotizaciones del comparador: se quedan en este navegador hasta que las guardes o las borres
@@ -163,20 +164,9 @@ const QuotesTab = ({
     toast.success('Agregada al comparador. Arma la siguiente o ve a Comparar.');
   };
 
-  const handleConvertQuote = async (id: string) => {
-    try {
-      setIsConverting(id);
-      const res = await impexService.convertQuoteToBatch(id);
-      if (res.success) {
-        toast.success(`Lote creado con éxito: ${res.data.batch_number}`);
-        fetchData();
-      }
-    } catch (err: any) {
-      toast.error(err.response?.data?.message || 'Error convirtiendo a lote');
-    } finally {
-      setIsConverting(null);
-    }
-  };
+  // Primero se ve cómo quedaría el lote; se crea solo al confirmar en la vista previa
+  const handleConvertQuote = (id: string) => setPreviewId(id);
+  const closePreview = useCallback(() => setPreviewId(null), []);
 
   const handleDeleteQuote = async (id: string) => {
     if (!confirm('¿Estás seguro de eliminar esta cotización del historial?')) return;
@@ -611,12 +601,20 @@ const QuotesTab = ({
           <QuoteHistory
             quotes={quotes}
             isDeleting={isDeleting}
-            isConverting={isConverting}
+            isConverting={previewId}
             onDelete={handleDeleteQuote}
             onConvert={handleConvertQuote}
             onEdit={editQuoteInComparator}
           />
         </div>
+      )}
+
+      {previewId && (
+        <BatchPreviewModal
+          quoteId={previewId}
+          onClose={closePreview}
+          onConverted={() => { setPreviewId(null); fetchData(); }}
+        />
       )}
     </div>
   );

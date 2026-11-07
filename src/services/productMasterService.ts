@@ -79,7 +79,28 @@ export interface UnifyPayload {
   };
 }
 
+export interface AiDescription {
+  description: string;
+  full_description: string;
+  warnings: string[];
+  impex: { found: boolean; name: string | null; replaced_by: string | null; discontinued: boolean } | null;
+  saved_part: { part_no: string; name: string | null } | null;
+}
+
 export const productMasterService = {
+  // La IA propone descripción corta y larga; no guarda nada
+  async aiDescription(payload: {
+    name: string;
+    oem_code: string | null;
+    category_id: string | null;
+    model_ids: string[];
+    conditions: { nuevo: number; usado: number };
+    current_descriptions: string[];
+    extra: string | null;
+  }): Promise<AiDescription> {
+    const res = await api.post('/product-masters/ai-description', payload, { timeout: 90_000 });
+    return res.data.data;
+  },
   async proposals(): Promise<MasterProposal[]> {
     const res = await api.get('/product-masters/proposals', { timeout: 60_000 });
     return res.data.data;

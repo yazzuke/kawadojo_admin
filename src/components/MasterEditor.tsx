@@ -2,6 +2,7 @@ import { useMemo, useRef, useState } from 'react';
 import toast from 'react-hot-toast';
 import { AlertTriangle, ArrowRight, Check, ImageOff, ImagePlus, Loader2 } from 'lucide-react';
 import type { Category } from '../types/product';
+import AiDescriptionBox from './AiDescriptionBox';
 import {
   apiError, composeName, productMasterService, tagFromName,
   type MasterOptions, type MasterProductRow,
@@ -84,6 +85,7 @@ export default function MasterEditor({ products: rawProducts, options, categorie
   const [name, setName] = useState(initial?.name ?? options.names[0]?.value ?? '');
   const [description, setDescription] = useState(initial?.description ?? options.descriptions[0]?.value ?? '');
   const [fullDescription, setFullDescription] = useState(initial?.full_description ?? options.full_descriptions[0]?.value ?? '');
+  const [fullOpen, setFullOpen] = useState(false);
   const [categoryId, setCategoryId] = useState(initial?.category_id ?? options.category_id ?? '');
   const [oem, setOem] = useState(initial?.oem_code ?? options.oem_codes[0]?.value ?? '');
   const [tag, setTag] = useState(initial?.group_tag ?? options.group_tags[0]?.value ?? '');
@@ -211,16 +213,34 @@ export default function MasterEditor({ products: rawProducts, options, categorie
             </div>
           )}
           <textarea value={description} onChange={e => setDescription(e.target.value)} rows={3} className={inputCls} placeholder="Descripción corta" />
-          {options.full_descriptions.length > 0 && (
-            <details className="text-sm">
-              <summary className="cursor-pointer text-gray-400 text-xs">Descripción larga ({options.full_descriptions.length} versiones)</summary>
+          <AiDescriptionBox
+            name={name}
+            oemCode={oem}
+            categoryId={categoryId}
+            modelIds={[...modelIds]}
+            conditions={{
+              nuevo: products.filter(p => p.condition === 'nuevo').length,
+              usado: products.filter(p => p.condition && p.condition !== 'nuevo').length,
+            }}
+            currentDescriptions={[description, ...options.descriptions.map(d => d.value)]}
+            onUse={(d, full) => {
+              setDescription(d);
+              if (full) { setFullDescription(full); setFullOpen(true); }
+              setApply(a => ({ ...a, description: true }));
+            }}
+          />
+          {(options.full_descriptions.length > 0 || fullDescription) && (
+            <details className="text-sm" open={fullOpen} onToggle={e => setFullOpen((e.target as HTMLDetailsElement).open)}>
+              <summary className="cursor-pointer text-gray-400 text-xs">
+                Descripción larga{options.full_descriptions.length ? ` (${options.full_descriptions.length} versiones)` : ''}
+              </summary>
               <div className="space-y-1.5 mt-2">
                 {options.full_descriptions.slice(0, 4).map(d => (
                   <Choice key={d.value} active={fullDescription === d.value} onClick={() => setFullDescription(d.value)} count={d.count}>
                     <span className="line-clamp-2">{d.value}</span>
                   </Choice>
                 ))}
-                <textarea value={fullDescription} onChange={e => setFullDescription(e.target.value)} rows={4} className={inputCls} />
+                <textarea value={fullDescription} onChange={e => setFullDescription(e.target.value)} rows={8} className={inputCls} />
               </div>
             </details>
           )}

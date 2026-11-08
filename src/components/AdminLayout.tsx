@@ -1,11 +1,11 @@
-import { Outlet, NavLink, useNavigate } from 'react-router-dom';
+import { Outlet, NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { 
-  LayoutDashboard, 
-  Package, 
-  Tags, 
-  LogOut, 
-  Menu, 
+import {
+  LayoutDashboard,
+  Package,
+  Tags,
+  LogOut,
+  Menu,
   X,
   Bike,
   ShipWheel,
@@ -17,34 +17,81 @@ import {
   Sparkles,
   Calculator,
   Layers,
-  Inbox
+  Inbox,
+  Users,
+  Store,
+  ListOrdered,
+  ChevronDown,
+  type LucideIcon,
 } from 'lucide-react';
 import { useState } from 'react';
 
-const navItems = [
-  { to: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
-  { to: '/products', icon: Package, label: 'Productos' },
-  { to: '/fichas', icon: Layers, label: 'Fichas' },
-  { to: '/categories', icon: Tags, label: 'Categorías' },
-  { to: '/models', icon: Bike, label: 'Modelos' },
-  { to: '/batches', icon: ShipWheel, label: 'Lotes' },
-  { to: '/orders', icon: ShoppingBag, label: 'Órdenes' },
-  { to: '/solicitudes', icon: Inbox, label: 'Pedidos de clientes' },
-  { to: '/financial', icon: TrendingUp, label: 'Finanzas' },
-  { to: '/reviews', icon: MessageSquare, label: 'Reseñas' },
-  { to: '/users', icon: LayoutDashboard, label: 'Usuarios' },
-  { to: '/impex', icon: ReceiptJapaneseYen, label: 'Impex' },
-  { to: '/impex-cotizaciones', icon: Calculator, label: 'Cotizaciones Impex' },
-  { to: '/ebay', icon: ShoppingBag, label: 'eBay' },
-  { to: '/oem', icon: BookOpen, label: 'Catálogo OEM' },
-  { to: '/resale-pricing', icon: Package, label: 'Precios Lista' },
-  { to: '/ai', icon: Sparkles, label: 'Asistente IA' },
+interface NavItem { to: string; icon: LucideIcon; label: string }
+interface NavGroup { title: string | null; items: NavItem[] }
+
+// Menú por secciones: lo de la tienda, lo que se vende, lo que se compra y el dinero
+const navGroups: NavGroup[] = [
+  { title: null, items: [{ to: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' }] },
+  {
+    title: 'Ventas y clientes',
+    items: [
+      { to: '/orders', icon: ShoppingBag, label: 'Órdenes' },
+      { to: '/solicitudes', icon: Inbox, label: 'Pedidos de clientes' },
+      { to: '/users', icon: Users, label: 'Usuarios' },
+      { to: '/reviews', icon: MessageSquare, label: 'Reseñas' },
+    ],
+  },
+  {
+    title: 'Catálogo de la tienda',
+    items: [
+      { to: '/products', icon: Package, label: 'Productos' },
+      { to: '/fichas', icon: Layers, label: 'Fichas' },
+      { to: '/categories', icon: Tags, label: 'Categorías' },
+      { to: '/models', icon: Bike, label: 'Modelos' },
+      { to: '/resale-pricing', icon: ListOrdered, label: 'Precios Lista' },
+    ],
+  },
+  {
+    title: 'Compras e importación',
+    items: [
+      { to: '/impex', icon: ReceiptJapaneseYen, label: 'Impex' },
+      { to: '/impex-cotizaciones', icon: Calculator, label: 'Cotizaciones Impex' },
+      { to: '/batches', icon: ShipWheel, label: 'Lotes' },
+      { to: '/ebay', icon: Store, label: 'eBay' },
+      { to: '/oem', icon: BookOpen, label: 'Catálogo OEM' },
+    ],
+  },
+  {
+    title: 'Dinero y herramientas',
+    items: [
+      { to: '/financial', icon: TrendingUp, label: 'Finanzas' },
+      { to: '/ai', icon: Sparkles, label: 'Asistente IA' },
+    ],
+  },
 ];
+
+const COLLAPSED_KEY = 'kawadojo.nav.collapsed';
+const loadCollapsed = (): string[] => {
+  try { return JSON.parse(localStorage.getItem(COLLAPSED_KEY) || '[]'); } catch { return []; }
+};
 
 export default function AdminLayout() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const { pathname } = useLocation();
+  const [collapsed, setCollapsed] = useState<string[]>(loadCollapsed);
+
+  const canSee = (item: NavItem) => {
+    if (user?.role === 'super_admin') return true;
+    if (user?.role === 'admin') return item.to === '/resale-pricing';
+    return false; // Por seguridad, si hay otro rol
+  };
+  const toggleGroup = (title: string) => {
+    const next = collapsed.includes(title) ? collapsed.filter(t => t !== title) : [...collapsed, title];
+    setCollapsed(next);
+    try { localStorage.setItem(COLLAPSED_KEY, JSON.stringify(next)); } catch { /* sin almacenamiento */ }
+  };
 
   const handleLogout = () => {
     logout();
@@ -80,30 +127,48 @@ export default function AdminLayout() {
         </div>
 
         {/* Nav */}
-        <nav className="flex-1 overflow-y-auto p-4 space-y-2">
-          {navItems
-            .filter((item) => {
-              if (user?.role === 'super_admin') return true;
-              if (user?.role === 'admin') return item.to === '/resale-pricing';
-              return false; // Por seguridad, si hay otro rol
-            })
-            .map((item) => (
-            <NavLink
-              key={item.to}
-              to={item.to}
-              onClick={() => setSidebarOpen(false)}
-              className={({ isActive }) => `
-                flex items-center gap-3 px-4 py-3 rounded-lg transition-colors
-                ${isActive 
-                  ? 'bg-kawa-green text-black font-medium' 
-                  : 'text-gray-400 hover:bg-gray-800 hover:text-white'
-                }
-              `}
-            >
-              <item.icon size={20} />
-              {item.label}
-            </NavLink>
-          ))}
+        <nav className="flex-1 overflow-y-auto px-3 py-4 space-y-4">
+          {navGroups.map((group) => {
+            const items = group.items.filter(canSee);
+            if (!items.length) return null;
+            // La sección de la página abierta nunca se esconde
+            const hasActive = items.some((i) => pathname.startsWith(i.to));
+            const isCollapsed = !!group.title && collapsed.includes(group.title) && !hasActive;
+            return (
+              <div key={group.title ?? 'inicio'}>
+                {group.title && (
+                  <button
+                    onClick={() => toggleGroup(group.title!)}
+                    className="w-full flex items-center justify-between px-3 mb-1 text-[11px] font-semibold uppercase tracking-wider text-gray-500 hover:text-gray-300"
+                  >
+                    {group.title}
+                    <ChevronDown size={14} className={`transition-transform ${isCollapsed ? '-rotate-90' : ''}`} />
+                  </button>
+                )}
+                {!isCollapsed && (
+                  <div className="space-y-0.5">
+                    {items.map((item) => (
+                      <NavLink
+                        key={item.to}
+                        to={item.to}
+                        onClick={() => setSidebarOpen(false)}
+                        className={({ isActive }) => `
+                          flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors
+                          ${isActive
+                            ? 'bg-kawa-green text-black font-medium'
+                            : 'text-gray-400 hover:bg-gray-800 hover:text-white'
+                          }
+                        `}
+                      >
+                        <item.icon size={18} />
+                        {item.label}
+                      </NavLink>
+                    ))}
+                  </div>
+                )}
+              </div>
+            );
+          })}
         </nav>
 
         {/* User & Logout */}

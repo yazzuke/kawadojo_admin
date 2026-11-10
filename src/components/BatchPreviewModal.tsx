@@ -10,7 +10,24 @@ interface Props {
   onConverted: (batchNumber: string) => void;
 }
 
-const formatCop = (n: number) => `$${Math.round(n).toLocaleString('es-CO')}`;
+const formatCop = (n: number) => `${Math.round(n).toLocaleString('es-CO')}`;
+
+type CostKey = 'purchase_total_cost' | 'shipping_cost' | 'customs_fees' | 'additional_fees';
+const COST_FIELDS: Array<{ key: CostKey; label: string; hint: string }> = [
+  { key: 'purchase_total_cost', label: 'Compra', hint: 'Lo que cobró el banco' },
+  { key: 'shipping_cost', label: 'Envío', hint: 'Flete desde Japón' },
+  { key: 'customs_fees', label: 'Aduana', hint: 'IVA + arancel' },
+  { key: 'additional_fees', label: 'Manejo', hint: 'Lo que cobró la transportadora' },
+];
+
+// Reparte la compra real entre las unidades en proporción a su costo (igual que el servidor)
+const scaleCosts = (costs: number[], purchase: number) => {
+  const planned = costs.reduce((s, c) => s + c, 0);
+  if (!costs.length || planned <= 0 || planned === purchase) return costs;
+  const out = costs.map(c => Math.round(c * (purchase / planned)));
+  out[out.length - 1] += purchase - out.reduce((s, c) => s + c, 0);
+  return out;
+};
 
 const TEMPLATE = {
   ficha: { label: 'Ficha', cls: 'bg-kawa-green/15 text-kawa-green', hint: 'Nombre, descripción, fotos y tag salen de la ficha' },
@@ -23,10 +40,20 @@ export default function BatchPreviewModal({ quoteId, onClose, onConverted }: Pro
   const [preview, setPreview] = useState<BatchPreview | null>(null);
   const [loading, setLoading] = useState(true);
   const [converting, setConverting] = useState(false);
+  // Valores reales que escribes (texto para poder dejarlos vacíos mientras editas)
+  const [real, setReal] = useState<Record<CostKey, string>>({ purchase_total_cost: '', shipping_cost: '', customs_fees: '', additional_fees: '' });
 
   useEffect(() => {
     impexService.previewBatch(quoteId)
-      .then(setPreview)
+      .then(p => {
+        setPreview(p);
+        setReal({
+          purchase_total_cost: String(p.costs.purchase_total_cost),
+          shipping_cost: String(p.costs.shipping_cost),
+          customs_fees: String(p.costs.customs_fees),
+          additional_fees: String(p.costs.additional_fees),
+        });
+      })
       .catch(err => { toast.error(apiError(err, 'No se pudo armar la vista previa')); onClose(); })
       .finally(() => setLoading(false));
   }, [quoteId, onClose]);
@@ -35,7 +62,7 @@ export default function BatchPreviewModal({ quoteId, onClose, onConverted }: Pro
     if (!preview) return;
     try {
       setConverting(true);
-      const res = await impexService.convertQuoteToBatch(quoteId);
+      const res = await impexService.convertQuoteToBatch(quoteId, realCosts);
       toast.success(`Lote ${res.data.batch_number} creado con ${res.data.products_created} productos`);
       onConverted(res.data.batch_number);
     } catch (err) {
@@ -50,6 +77,22 @@ export default function BatchPreviewModal({ quoteId, onClose, onConverted }: Pro
   products.forEach(p => { counts[p.template]++; });
   const withWarnings = products.filter(p => p.warnings.length).length;
 
+  const value = (k: CostKey) => {
+    const n = Number(real[k].replace(/[^0-9]/g, ''));
+    return real[k].trim() && Number.isFinite(n) ? n : (preview?.costs[k] ?? 0);
+  };
+  const realCosts = {
+    purchase_total_cost: value('purchase_total_cost'),
+    shipping_cost: value('shipping_cost'),
+    customs_fees: value('customs_fees'),
+    additional_fees: value('additional_fees'),
+  };
+  const realTotal = realCosts.purchase_total_cost + realCosts.shipping_cost + realCosts.customs_fees + realCosts.additional_fees;
+  const unitCosts = scaleCosts(products.map(p => p.cost), realCosts.purchase_total_cost);
+  // Cuánto queda cada unidad puesta en Colombia (compra + su parte de envío, aduana y manejo)
+  const landedFactor = realCosts.purchase_total_cost > 0 ? realTotal / realCosts.purchase_total_cost : 1;
+  const totalDiff = preview ? realTotal - preview.costs.total_cost : 0;
+
   return (
     <div className="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-4" onClick={onClose}>
       <div className="bg-kawa-gray border border-gray-800 rounded-2xl w-full max-w-5xl max-h-[90vh] flex flex-col" onClick={e => e.stopPropagation()}>
@@ -58,7 +101,7 @@ export default function BatchPreviewModal({ quoteId, onClose, onConverted }: Pro
             <h2 className="text-lg font-bold text-white flex items-center gap-2"><PackagePlus size={20} className="text-kawa-green" /> Así quedaría el lote</h2>
             {preview && (
               <p className="text-sm text-gray-400 mt-0.5">
-                {preview.quote_number} → <span className="text-white font-semibold">{preview.batch_number}</span> · {products.length} productos · costo total {formatCop(preview.costs.total_cost)}
+                {preview.quote_number} → <span className="text-white font-semibold">{preview.batch_number}</span> · {products.length} productos · costo total {formatCop(realTotal)}
               </p>
             )}
           </div>
@@ -96,7 +139,7 @@ export default function BatchPreviewModal({ quoteId, onClose, onConverted }: Pro
                     <th className="px-2 py-2">Viene de</th>
                     <th className="px-2 py-2">Categoría · motos</th>
                     <th className="px-2 py-2 text-right">Precio</th>
-                    <th className="px-4 py-2 text-right">Costo</th>
+                    <th className="px-4 py-2 text-right">Costo · puesto aquí</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -125,17 +168,47 @@ export default function BatchPreviewModal({ quoteId, onClose, onConverted }: Pro
                         <p className="text-[11px] text-gray-500">{p.models.map(m => m.name).join(', ') || '—'}</p>
                       </td>
                       <td className="px-2 py-2 text-right font-mono text-gray-200">{formatCop(p.price)}</td>
-                      <td className="px-4 py-2 text-right font-mono text-gray-400">{formatCop(p.cost)}</td>
+                      <td className="px-4 py-2 text-right font-mono">
+                        <span className="text-gray-300">{formatCop(unitCosts[i])}</span>
+                        {unitCosts[i] !== p.cost && <span className="block text-[10px] text-gray-600 line-through">{formatCop(p.cost)}</span>}
+                        <span className="block text-[11px] text-kawa-green/80">{formatCop(unitCosts[i] * landedFactor)}</span>
+                      </td>
                     </tr>
                   ))}
                 </tbody>
               </table>
             </div>
 
-            <div className="flex flex-wrap items-center gap-3 px-5 py-4 border-t border-gray-800">
+            <div className="px-5 pt-4 border-t border-gray-800 space-y-2">
+              <p className="text-xs text-gray-400">
+                Corrige con lo que de verdad pagaste. La compra se reparte entre las unidades, así que el costo de cada pieza queda con lo que cobró el banco.
+              </p>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                {COST_FIELDS.map(f => {
+                  const est = preview.costs[f.key];
+                  const diff = realCosts[f.key] - est;
+                  return (
+                    <label key={f.key} className="block">
+                      <span className="block text-[11px] uppercase tracking-wide text-gray-500">{f.label} <span className="normal-case tracking-normal text-gray-600">· {f.hint}</span></span>
+                      <input
+                        inputMode="numeric"
+                        value={real[f.key]}
+                        onChange={e => setReal(r => ({ ...r, [f.key]: e.target.value }))}
+                        className={`w-full mt-1 bg-kawa-black border rounded-lg px-3 py-2 text-sm text-white font-mono outline-none focus:border-kawa-green ${diff ? 'border-yellow-500/50' : 'border-gray-800'}`}
+                      />
+                      <span className="block text-[11px] text-gray-500 mt-0.5">
+                        Cotización {formatCop(est)}
+                        {diff !== 0 && <span className={diff > 0 ? 'text-red-300' : 'text-kawa-green'}> · {diff > 0 ? '+' : '−'}{formatCop(Math.abs(diff))}</span>}
+                      </span>
+                    </label>
+                  );
+                })}
+              </div>
+            </div>
+            <div className="flex flex-wrap items-center gap-3 px-5 py-4">
               <p className="text-xs text-gray-500 mr-auto max-w-xl">
-                Quedan "En camino". Compra {formatCop(preview.costs.purchase_total_cost)} · envío {formatCop(preview.costs.shipping_cost)} · aduana {formatCop(preview.costs.customs_fees)}
-                {preview.costs.additional_fees > 0 && ` · manejo ${formatCop(preview.costs.additional_fees)}`}
+                Quedan "En camino". Total {formatCop(realTotal)}
+                {totalDiff !== 0 && <span className={totalDiff > 0 ? 'text-red-300' : 'text-kawa-green'}> ({totalDiff > 0 ? '+' : '−'}{formatCop(Math.abs(totalDiff))} vs la cotización)</span>}
               </p>
               <button onClick={onClose} className="text-sm text-gray-300 hover:text-white px-4 py-2 border border-gray-700 rounded-lg">Cancelar</button>
               <button

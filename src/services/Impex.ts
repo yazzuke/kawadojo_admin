@@ -75,8 +75,9 @@ export const impexService = {
     const response = await api.get(`/quotes/${id}/batch-preview`, { timeout: 60_000 });
     return response.data.data;
   },
-  convertQuoteToBatch: async (id: string): Promise<{ success: boolean; data: { batch_number: string; products_created: number } }> => {
-    const response = await api.post(`/quotes/${id}/convert`, undefined, { timeout: 90_000 });
+  // costs: lo que de verdad cobraron; si no se manda, se usan los valores de la cotización
+  convertQuoteToBatch: async (id: string, costs?: Partial<Omit<BatchPreview['costs'], 'total_cost'>>): Promise<{ success: boolean; data: { batch_number: string; products_created: number } }> => {
+    const response = await api.post(`/quotes/${id}/convert`, costs ?? {}, { timeout: 90_000 });
     return response.data;
   },
   deleteQuote: async (id: string): Promise<any> => {

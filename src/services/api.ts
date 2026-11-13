@@ -1,7 +1,7 @@
 import axios from 'axios';
 
-//const API_URL = 'http://localhost:3000/api'
-const API_URL = 'https://api.kawadojo.com/api';
+// En local se cambia con VITE_API_URL en .env.local (no se sube); en producción queda la real
+const API_URL = import.meta.env.VITE_API_URL || 'https://api.kawadojo.com/api';
 
 const api = axios.create({
   baseURL: API_URL,

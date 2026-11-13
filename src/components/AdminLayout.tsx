@@ -22,6 +22,7 @@ import {
   Store,
   ListOrdered,
   ChevronDown,
+  Wallet,
   type LucideIcon,
 } from 'lucide-react';
 import { useState } from 'react';
@@ -64,6 +65,7 @@ const navGroups: NavGroup[] = [
   {
     title: 'Dinero y herramientas',
     items: [
+      { to: '/caja', icon: Wallet, label: 'Caja' },
       { to: '/financial', icon: TrendingUp, label: 'Finanzas' },
       { to: '/ai', icon: Sparkles, label: 'Asistente IA' },
     ],

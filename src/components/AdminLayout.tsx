@@ -22,6 +22,8 @@ import {
   Store,
   ListOrdered,
   ChevronDown,
+  BarChart3,
+  History,
   type LucideIcon,
 } from 'lucide-react';
 import { useState } from 'react';
@@ -36,6 +38,7 @@ const navGroups: NavGroup[] = [
     title: 'Ventas y clientes',
     items: [
       { to: '/orders', icon: ShoppingBag, label: 'Órdenes' },
+      { to: '/analitica', icon: BarChart3, label: 'Analítica' },
       { to: '/solicitudes', icon: Inbox, label: 'Pedidos de clientes' },
       { to: '/users', icon: Users, label: 'Usuarios' },
       { to: '/reviews', icon: MessageSquare, label: 'Reseñas' },
@@ -66,6 +69,7 @@ const navGroups: NavGroup[] = [
     items: [
       { to: '/financial', icon: TrendingUp, label: 'Finanzas' },
       { to: '/ai', icon: Sparkles, label: 'Asistente IA' },
+      { to: '/historial', icon: History, label: 'Historial de cambios' },
     ],
   },
 ];

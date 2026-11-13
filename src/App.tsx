@@ -23,6 +23,8 @@ import AiCompatibilityPage from './pages/AiCompatibility';
 import ImpexQuotesPage from './pages/ImpexQuotes';
 import ProductMastersPage from './pages/ProductMasters';
 import CustomerRequestsPage from './pages/CustomerRequests';
+import AnalyticsPage from './pages/Analytics';
+import AuditLogPage from './pages/AuditLog';
 import GlobalToaster from './Utils/Toast';
 
 function App() {
@@ -57,6 +59,8 @@ function App() {
               <Route path="/impex-cotizaciones" element={<ImpexQuotesPage />} />
               <Route path="/fichas" element={<ProductMastersPage />} />
               <Route path="/solicitudes" element={<CustomerRequestsPage />} />
+              <Route path="/analitica" element={<AnalyticsPage />} />
+              <Route path="/historial" element={<AuditLogPage />} />
             </Route>
           </Route>
 

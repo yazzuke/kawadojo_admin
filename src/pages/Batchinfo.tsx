@@ -300,18 +300,38 @@ export default function BatchInfoPage({ batchId, onBack, onDeleted }: BatchInfoP
                 {formatCurrency(batch.metrics.revenue)}
               </p>
             </div>
-            <div>
-              <p className="text-sm text-gray-400">Ganancia Real</p>
-              <p className={`text-2xl font-bold ${batch.metrics.profit >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                {formatCurrency(batch.metrics.profit)}
-              </p>
-            </div>
-            <div>
-              <p className="text-sm text-gray-400">ROI Real</p>
-              <p className="text-2xl font-bold text-blue-400">
-                {batch.metrics.roi.toFixed(2)}%
-              </p>
-            </div>
+            {batch.metrics.profit < 0 && batch.metrics.remaining > 0 ? (
+              // Until the batch sells out, a negative result is cost not yet recovered, not a loss
+              <>
+                <div>
+                  <p className="text-sm text-gray-400">Por Recuperar</p>
+                  <p className="text-2xl font-bold text-yellow-400">
+                    {formatCurrency(-batch.metrics.profit)}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-400">Inversión Recuperada</p>
+                  <p className="text-2xl font-bold text-blue-400">
+                    {(batch.total_cost > 0 ? (batch.metrics.revenue / batch.total_cost) * 100 : 0).toFixed(2)}%
+                  </p>
+                </div>
+              </>
+            ) : (
+              <>
+                <div>
+                  <p className="text-sm text-gray-400">Ganancia Real</p>
+                  <p className={`text-2xl font-bold ${batch.metrics.profit >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                    {formatCurrency(batch.metrics.profit)}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-400">ROI Real</p>
+                  <p className="text-2xl font-bold text-blue-400">
+                    {batch.metrics.roi.toFixed(2)}%
+                  </p>
+                </div>
+              </>
+            )}
           </div>
         </div>
       )}
@@ -330,16 +350,16 @@ export default function BatchInfoPage({ batchId, onBack, onDeleted }: BatchInfoP
               <span className="text-gray-400">Envío:</span>
               <span className="font-medium text-gray-200">{formatCurrency(batch.shipping_cost)}</span>
             </div>
-            {batch.customs_fees && (
+            {(batch.customs_fees ?? 0) > 0 && (
               <div className="flex justify-between">
                 <span className="text-gray-400">Aduana:</span>
-                <span className="font-medium text-gray-200">{formatCurrency(batch.customs_fees)}</span>
+                <span className="font-medium text-gray-200">{formatCurrency(batch.customs_fees ?? 0)}</span>
               </div>
             )}
-            {batch.additional_fees && (
+            {(batch.additional_fees ?? 0) > 0 && (
               <div className="flex justify-between">
                 <span className="text-gray-400">Fees adicionales:</span>
-                <span className="font-medium text-gray-200">{formatCurrency(batch.additional_fees)}</span>
+                <span className="font-medium text-gray-200">{formatCurrency(batch.additional_fees ?? 0)}</span>
               </div>
             )}
             <div className="flex justify-between pt-3 border-t border-gray-700">

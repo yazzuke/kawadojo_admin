@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Plus, Trash2, X, Upload, Loader2 } from 'lucide-react';
+import { Plus, Trash2, X, Upload, Loader2, Pencil } from 'lucide-react';
 import { modelService } from '../services/modelService';
 import type { CompatibleModel } from '../types/product';
 
@@ -8,6 +8,8 @@ export default function ModelsPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
+  // Modelo que se está editando (null = creando uno nuevo)
+  const [editing, setEditing] = useState<CompatibleModel | null>(null);
 
   // Form state
   const [name, setName] = useState('');
@@ -31,17 +33,32 @@ export default function ModelsPage() {
     }
   };
 
+  // Solo las vistas previas locales (blob:) se liberan; el logo guardado es una URL normal
+  const releasePreview = (url: string | null) => {
+    if (url?.startsWith('blob:')) URL.revokeObjectURL(url);
+  };
+
   const handleLogoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
+      releasePreview(logoPreview);
       setLogo(file);
       setLogoPreview(URL.createObjectURL(file));
     }
   };
 
+  const openEdit = (model: CompatibleModel) => {
+    setEditing(model);
+    setName(model.name);
+    setLogo(null);
+    setLogoPreview(model.logo_url || null);
+    setError('');
+    setIsModalOpen(true);
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!logo) {
+    if (!editing && !logo) {
       setError('Debes seleccionar un logo');
       return;
     }
@@ -49,16 +66,21 @@ export default function ModelsPage() {
     setError('');
     setIsSubmitting(true);
 
+    const action = editing ? 'guardar los cambios' : 'crear el modelo';
     try {
-      await modelService.create({ name, logo });
+      if (editing) {
+        await modelService.update(editing.id, { name, logo });
+      } else if (logo) {
+        await modelService.create({ name, logo });
+      }
       loadModels();
       handleCloseModal();
     } catch (err: unknown) {
       if (err && typeof err === 'object' && 'response' in err) {
         const error = err as { response?: { data?: { message?: string } } };
-        setError(error.response?.data?.message || 'Error al crear el modelo');
+        setError(error.response?.data?.message || `No se pudo ${action}`);
       } else {
-        setError('Error al crear el modelo');
+        setError(`No se pudo ${action}`);
       }
     } finally {
       setIsSubmitting(false);
@@ -77,11 +99,10 @@ export default function ModelsPage() {
 
   const handleCloseModal = () => {
     setIsModalOpen(false);
+    setEditing(null);
     setName('');
     setLogo(null);
-    if (logoPreview) {
-      URL.revokeObjectURL(logoPreview);
-    }
+    releasePreview(logoPreview);
     setLogoPreview(null);
     setError('');
   };
@@ -111,11 +132,23 @@ export default function ModelsPage() {
         {models.map((model) => (
           <div
             key={model.id}
-            className="bg-kawa-gray rounded-xl p-6 border border-gray-800 flex flex-col items-center group relative"
+            onClick={() => openEdit(model)}
+            title="Editar nombre o logo"
+            className="bg-kawa-gray rounded-xl p-6 border border-gray-800 flex flex-col items-center group relative cursor-pointer hover:border-kawa-green/60 transition-colors"
           >
+            {/* Editar */}
+            <button
+              onClick={(e) => { e.stopPropagation(); openEdit(model); }}
+              title="Editar"
+              className="absolute top-2 left-2 p-2 bg-white/5 rounded-lg text-gray-300 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-white/10 hover:text-white"
+            >
+              <Pencil size={16} />
+            </button>
+
             {/* Delete button */}
             <button
-              onClick={() => setDeleteConfirm(model.id)}
+              onClick={(e) => { e.stopPropagation(); setDeleteConfirm(model.id); }}
+              title="Eliminar"
               className="absolute top-2 right-2 p-2 bg-red-500/10 rounded-lg text-red-400 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-500/20"
             >
               <Trash2 size={16} />
@@ -128,8 +161,9 @@ export default function ModelsPage() {
                 className="h-16 object-contain mb-4"
               />
             ) : (
-              <div className="h-16 w-full bg-gray-800 rounded-lg mb-4 flex items-center justify-center">
-                <span className="text-gray-500">Sin logo</span>
+              <div className="h-16 w-full bg-gray-800 rounded-lg mb-4 flex items-center justify-center gap-2 group-hover:bg-gray-700 transition-colors">
+                <Upload size={16} className="text-gray-500" />
+                <span className="text-gray-500">Sin logo · clic para subir</span>
               </div>
             )}
             <h3 className="text-white font-medium text-center">{model.name}</h3>
@@ -148,7 +182,7 @@ export default function ModelsPage() {
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-kawa-gray rounded-xl max-w-md w-full border border-gray-800">
             <div className="p-4 border-b border-gray-800 flex justify-between items-center">
-              <h2 className="text-xl font-bold text-white">Nuevo Modelo</h2>
+              <h2 className="text-xl font-bold text-white">{editing ? 'Editar modelo' : 'Nuevo Modelo'}</h2>
               <button onClick={handleCloseModal} className="text-gray-400 hover:text-white">
                 <X size={24} />
               </button>
@@ -177,8 +211,13 @@ export default function ModelsPage() {
 
               <div>
                 <label className="block text-sm font-medium text-gray-300 mb-2">
-                  Logo *
+                  {editing ? 'Logo' : 'Logo *'}
                 </label>
+                {editing && (
+                  <p className="text-xs text-gray-500 mb-2">
+                    {editing.logo_url ? 'Si subes otro, reemplaza al actual.' : 'Este modelo todavía no tiene logo.'}
+                  </p>
+                )}
                 {logoPreview ? (
                   <div className="relative w-full h-32 bg-kawa-black rounded-lg flex items-center justify-center border border-gray-700">
                     <img
@@ -190,9 +229,10 @@ export default function ModelsPage() {
                       type="button"
                       onClick={() => {
                         setLogo(null);
-                        if (logoPreview) URL.revokeObjectURL(logoPreview);
+                        releasePreview(logoPreview);
                         setLogoPreview(null);
                       }}
+                      title={editing && !logo ? 'Cambiar logo' : 'Quitar'}
                       className="absolute top-2 right-2 w-6 h-6 bg-red-500 rounded-full flex items-center justify-center text-white"
                     >
                       <X size={14} />
@@ -228,10 +268,10 @@ export default function ModelsPage() {
                   {isSubmitting ? (
                     <>
                       <Loader2 size={18} className="animate-spin" />
-                      Creando...
+                      {editing ? 'Guardando...' : 'Creando...'}
                     </>
                   ) : (
-                    'Crear'
+                    editing ? 'Guardar' : 'Crear'
                   )}
                 </button>
               </div>

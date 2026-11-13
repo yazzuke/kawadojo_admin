@@ -30,6 +30,20 @@ export const modelService = {
     return response.data.data;
   },
 
+  // Cambiar el nombre y/o el logo. Si no mandas logo, se queda el que tenía.
+  async update(id: string, data: { name: string; logo?: File | null }): Promise<CompatibleModel> {
+    const formData = new FormData();
+    formData.append('name', data.name);
+    if (data.logo) formData.append('logo', data.logo);
+
+    const response = await api.put<ApiResponse<CompatibleModel>>(`/moto-models/${id}`, formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+    return response.data.data;
+  },
+
   async delete(id: string): Promise<void> {
     await api.delete(`/moto-models/${id}`);
   },

@@ -5,11 +5,26 @@ import UserOrdersModal from '../components/UserOrdersModal';
 import CreateUserModal from '../components/CreateUserModal';
 import CreateOrderModal from '../components/CreateOrderModal';
 
+// Los clientes que creas a mano quedan con un correo inventado @kawacustomer.com
+const isManual = (email: string) => email.endsWith('@kawacustomer.com');
+
+const DAY = 86_400_000;
+const formatCreated = (iso: string) => {
+  const d = new Date(iso);
+  const days = Math.floor((Date.now() - d.getTime()) / DAY);
+  const when = days <= 0 ? 'hoy' : days === 1 ? 'ayer' : days < 30 ? `hace ${days} días` : null;
+  return { date: d.toLocaleDateString('es-CO', { day: 'numeric', month: 'short', year: 'numeric' }), when };
+};
+
+interface Filters { source: string; orders: string; sort: string }
+const NO_FILTERS: Filters = { source: '', orders: '', sort: 'newest' };
+
 const Users: React.FC = () => {
   const [users, setUsers] = useState<User[]>([]);
   const [pagination, setPagination] = useState<UsersResponse['pagination'] | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [searchTerm, setSearchTerm] = useState('');
+  const [filters, setFilters] = useState<Filters>(NO_FILTERS);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
@@ -21,11 +36,17 @@ const Users: React.FC = () => {
     // Si buscamos, lo ideal es siempre volver a la página 1.
     // Usaremos un pequeño timeout para hacer "debounce" de la búsqueda.
     const delayDebounceFn = setTimeout(() => {
-      fetchUsers(currentPage, searchTerm);
+      fetchUsers(currentPage, searchTerm, filters);
     }, 500);
 
     return () => clearTimeout(delayDebounceFn);
-  }, [currentPage, searchTerm]);
+  }, [currentPage, searchTerm, filters]);
+
+  const setFilter = (patch: Partial<Filters>) => {
+    setFilters(f => ({ ...f, ...patch }));
+    setCurrentPage(1);
+  };
+  const hasFilters = filters.source || filters.orders || filters.sort !== 'newest';
 
   // Si el usuario escribe para buscar, reseteamos a la página 1
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -33,10 +54,10 @@ const Users: React.FC = () => {
     setCurrentPage(1);
   };
 
-  const fetchUsers = async (page: number, search: string) => {
+  const fetchUsers = async (page: number, search: string, f: Filters = filters) => {
     try {
       setLoading(true);
-      const data = await userService.getUsers(page, 20, search);
+      const data = await userService.getUsers(page, 20, search, f);
       setUsers(data.data || []);
       setPagination(data.pagination || null);
       setError(null);
@@ -69,6 +90,8 @@ const Users: React.FC = () => {
 
   if (error) return <div className="p-4 text-red-500">{error}</div>;
 
+  const selectCls = 'bg-[#1e1e1e] text-white text-sm border border-gray-700 rounded-lg px-3 py-2 focus:outline-none focus:border-kawa-green';
+
   return (
     <div className="p-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
@@ -99,12 +122,37 @@ const Users: React.FC = () => {
         </div>
       </div>
 
+      {/* Filtros */}
+      <div className="flex flex-wrap items-center gap-2 mb-4">
+        <select value={filters.sort} onChange={e => setFilter({ sort: e.target.value })} className={selectCls}>
+          <option value="newest">Más nuevos primero</option>
+          <option value="oldest">Más viejos primero</option>
+          <option value="most_orders">Más órdenes primero</option>
+          <option value="last_login">Último ingreso a la tienda</option>
+        </select>
+        <select value={filters.source} onChange={e => setFilter({ source: e.target.value })} className={selectCls}>
+          <option value="">Todos los clientes</option>
+          <option value="web">Se registraron en la tienda</option>
+          <option value="manual">Creados a mano</option>
+        </select>
+        <select value={filters.orders} onChange={e => setFilter({ orders: e.target.value })} className={selectCls}>
+          <option value="">Con y sin órdenes</option>
+          <option value="with">Con órdenes</option>
+          <option value="without">Sin órdenes</option>
+        </select>
+        {hasFilters && (
+          <button onClick={() => setFilter(NO_FILTERS)} className="text-xs text-gray-400 hover:text-white px-2">Quitar filtros</button>
+        )}
+        {loading && <span className="text-xs text-gray-500">Cargando...</span>}
+      </div>
+
       <div className="bg-kawa-gray rounded-xl border border-gray-800 mb-4 overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full">
             <thead className="border-b border-gray-800">
               <tr className="text-left text-gray-400 text-sm">
                 <th className="p-4 font-medium uppercase tracking-wider">Nombre</th>
+                <th className="p-4 font-medium uppercase tracking-wider">Creado</th>
                 <th className="p-4 font-medium uppercase tracking-wider">Email</th>
                 <th className="p-4 font-medium uppercase tracking-wider">Teléfono</th>
                 <th className="p-4 font-medium uppercase tracking-wider">Rol</th>
@@ -118,15 +166,28 @@ const Users: React.FC = () => {
                   <td className="p-4">
                     <div className="text-sm font-medium text-white">{user.name}</div>
                   </td>
+                  <td className="p-4 whitespace-nowrap">
+                    {user.created_at ? (() => {
+                      const c = formatCreated(user.created_at);
+                      return (
+                        <>
+                          <div className="text-sm text-gray-300">{c.date}</div>
+                          {c.when && <div className="text-[11px] text-kawa-green">{c.when}</div>}
+                        </>
+                      );
+                    })() : <span className="text-gray-600">—</span>}
+                  </td>
                   <td className="p-4">
-                    <div className="text-sm text-gray-400">{user.email}</div>
+                    {isManual(user.email)
+                      ? <span title={user.email} className="text-xs text-gray-500 italic">Creado a mano (sin correo)</span>
+                      : <div className="text-sm text-gray-400">{user.email}</div>}
                   </td>
                   <td className="p-4">
                     <div className="text-sm text-gray-400">{user.phone}</div>
                   </td>
                   <td className="p-4">
                     <span className="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-md bg-[#2d3748] text-gray-300 border border-gray-700">
-                      {user.role}
+                      {user.role === 'customer' ? 'Cliente' : user.role}
                     </span>
                   </td>
                   <td className="p-4">
@@ -157,7 +218,7 @@ const Users: React.FC = () => {
               ))}
               {users.length === 0 && (
                 <tr>
-                  <td colSpan={6} className="p-8 text-center text-sm text-gray-500">
+                  <td colSpan={7} className="p-8 text-center text-sm text-gray-500">
                     No se encontraron usuarios.
                   </td>
                 </tr>
@@ -212,7 +273,7 @@ const Users: React.FC = () => {
         isOpen={showCreateUser}
         onClose={() => setShowCreateUser(false)}
         onSuccess={(newUser) => {
-          fetchUsers(1, '');
+          fetchUsers(1, '', filters);
           setOrderUser(newUser); // Al crear, abrirle de una vez para crear orden
         }}
       />
@@ -222,7 +283,7 @@ const Users: React.FC = () => {
         onClose={() => setOrderUser(null)}
         user={orderUser}
         onSuccess={() => {
-          fetchUsers(currentPage, searchTerm); // Refresh table counts
+          fetchUsers(currentPage, searchTerm, filters); // Refresh table counts
         }}
       />
     </div>

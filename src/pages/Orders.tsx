@@ -12,7 +12,9 @@ import {
   XCircle,
   Search,
   Plus,
+  X,
 } from 'lucide-react';
+import toast from 'react-hot-toast';
 import { orderService } from '../services/orderService';
 import type { Order, SalesMetrics, OrderFilters } from '../types/order';
 import { ORDER_STATUSES, PAYMENT_METHODS } from '../types/order';
@@ -20,6 +22,11 @@ import type { User } from '../types/users';
 import SelectUserModal from '../components/SelectUserModal';
 import CreateUserModal from '../components/CreateUserModal';
 import CreateOrderModal from '../components/CreateOrderModal';
+
+// Estados que se pueden poner a varias órdenes a la vez (los que el servidor acepta)
+const BULK_STATUSES = ORDER_STATUSES.filter((s) =>
+  ['pending', 'paid', 'shipped', 'delivered', 'cancelled'].includes(s.value)
+);
 
 export default function OrdersPage() {
   const navigate = useNavigate();
@@ -29,6 +36,12 @@ export default function OrdersPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [filters, setFilters] = useState<OrderFilters>({});
   const [searchTerm, setSearchTerm] = useState('');
+
+  // Selección para cambiar varias órdenes a la vez
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [bulkStatus, setBulkStatus] = useState('');
+  const [bulkComment, setBulkComment] = useState('');
+  const [bulkProgress, setBulkProgress] = useState<{ done: number; total: number } | null>(null);
 
   // Modals state
   const [showSelectUser, setShowSelectUser] = useState(false);
@@ -81,6 +94,69 @@ export default function OrdersPage() {
     }
 
     setFilteredOrders(filtered);
+  };
+
+  // Solo cuentan las seleccionadas que se ven con los filtros actuales
+  const selectedOrders = filteredOrders.filter((o) => selected.has(o.id));
+  const allVisibleSelected = filteredOrders.length > 0 && selectedOrders.length === filteredOrders.length;
+
+  const toggleOne = (id: string) => {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const toggleAllVisible = () => {
+    setSelected(allVisibleSelected ? new Set() : new Set(filteredOrders.map((o) => o.id)));
+  };
+
+  const clearSelection = () => {
+    setSelected(new Set());
+    setBulkStatus('');
+    setBulkComment('');
+  };
+
+  const applyBulkStatus = async () => {
+    if (!bulkStatus || selectedOrders.length === 0) return;
+    const label = getStatusInfo(bulkStatus).label;
+    const toChange = selectedOrders.filter((o) => o.status !== bulkStatus);
+    const already = selectedOrders.length - toChange.length;
+
+    if (toChange.length === 0) {
+      toast(`Las ${selectedOrders.length} órdenes ya están en "${label}"`);
+      return;
+    }
+
+    const warning = bulkStatus === 'cancelled'
+      ? '\n\nOjo: al cancelar, los productos de esas órdenes vuelven a quedar disponibles en la tienda.'
+      : '';
+    if (!window.confirm(`¿Cambiar ${toChange.length} órdenes a "${label}"?${warning}`)) return;
+
+    setBulkProgress({ done: 0, total: toChange.length });
+    const failed: string[] = [];
+    // Una por una, igual que si lo hicieras desde el detalle de cada orden
+    for (const [i, order] of toChange.entries()) {
+      try {
+        await orderService.updateStatus(order.id, {
+          status: bulkStatus as Order['status'],
+          comment: bulkComment.trim() || 'Cambio en grupo desde la lista de órdenes',
+        });
+      } catch {
+        failed.push(order.order_number);
+      }
+      setBulkProgress({ done: i + 1, total: toChange.length });
+    }
+    setBulkProgress(null);
+
+    const ok = toChange.length - failed.length;
+    if (ok > 0) toast.success(`${ok} órdenes quedaron en "${label}"${already ? ` (${already} ya lo estaban)` : ''}`);
+    if (failed.length) toast.error(`No se pudieron cambiar: ${failed.join(', ')}`, { duration: 8000 });
+
+    clearSelection();
+    await loadData();
   };
 
   const handleViewDetails = (order: Order) => {
@@ -298,12 +374,63 @@ export default function OrdersPage() {
         </div>
       </div>
 
+      {/* Barra para cambiar varias órdenes a la vez */}
+      {selectedOrders.length > 0 && (
+        <div className="sticky top-2 z-20 bg-kawa-black border border-kawa-green/60 rounded-lg p-3 flex flex-wrap items-center gap-3 shadow-lg">
+          <span className="text-white font-semibold text-sm">
+            {selectedOrders.length} {selectedOrders.length === 1 ? 'orden seleccionada' : 'órdenes seleccionadas'}
+          </span>
+          <select
+            value={bulkStatus}
+            onChange={(e) => setBulkStatus(e.target.value)}
+            disabled={!!bulkProgress}
+            className="px-3 py-2 bg-kawa-gray border border-gray-700 rounded-lg text-white text-sm focus:ring-2 focus:ring-kawa-green focus:border-transparent"
+          >
+            <option value="">Cambiar estado a...</option>
+            {BULK_STATUSES.map((s) => (
+              <option key={s.value} value={s.value}>{s.label}</option>
+            ))}
+          </select>
+          <input
+            type="text"
+            value={bulkComment}
+            onChange={(e) => setBulkComment(e.target.value)}
+            disabled={!!bulkProgress}
+            placeholder="Nota (opcional), ej: enviadas por Interrapidísimo"
+            className="flex-1 min-w-[200px] px-3 py-2 bg-kawa-gray border border-gray-700 rounded-lg text-white text-sm placeholder-gray-500 focus:ring-2 focus:ring-kawa-green focus:border-transparent"
+          />
+          <button
+            onClick={applyBulkStatus}
+            disabled={!bulkStatus || !!bulkProgress}
+            className="bg-kawa-green text-black font-bold text-sm py-2 px-4 rounded-lg hover:bg-green-500 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+          >
+            {bulkProgress ? `Cambiando ${bulkProgress.done}/${bulkProgress.total}...` : 'Aplicar'}
+          </button>
+          <button
+            onClick={clearSelection}
+            disabled={!!bulkProgress}
+            className="text-gray-400 hover:text-white text-sm inline-flex items-center gap-1 disabled:opacity-40"
+          >
+            <X size={16} /> Quitar selección
+          </button>
+        </div>
+      )}
+
       {/* Orders Table */}
       <div className="bg-kawa-gray rounded-lg shadow-sm border border-gray-800 overflow-hidden">
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-800">
             <thead className="bg-kawa-black">
               <tr>
+                <th className="pl-6 pr-2 py-3 w-8">
+                  <input
+                    type="checkbox"
+                    checked={allVisibleSelected}
+                    onChange={toggleAllVisible}
+                    title="Seleccionar todas las que se ven"
+                    className="w-4 h-4 accent-kawa-green cursor-pointer"
+                  />
+                </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
                   Orden
                 </th>
@@ -336,7 +463,16 @@ export default function OrdersPage() {
                 const paymentStatus = payment?.status || 'N/A';
 
                 return (
-                  <tr key={order.id} className="hover:bg-gray-800">
+                  <tr key={order.id} className={selected.has(order.id) ? 'bg-kawa-green/10 hover:bg-gray-800' : 'hover:bg-gray-800'}>
+                    <td className="pl-6 pr-2 py-4">
+                      <input
+                        type="checkbox"
+                        checked={selected.has(order.id)}
+                        onChange={() => toggleOne(order.id)}
+                        aria-label={`Seleccionar ${order.order_number}`}
+                        className="w-4 h-4 accent-kawa-green cursor-pointer"
+                      />
+                    </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="font-medium text-white">{order.order_number}</div>
                       <div className="text-sm text-gray-400">{itemsCount} items</div>

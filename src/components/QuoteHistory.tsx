@@ -217,7 +217,13 @@ export default function QuoteHistory({ quotes, isDeleting, isConverting, onDelet
                 {q.items.map((it, idx) => (
                   <li key={idx} className="flex items-center gap-2 py-1.5 text-sm">
                     <span className="bg-gray-800 text-gray-300 px-1.5 py-0.5 rounded text-[11px] font-bold shrink-0">{it.quantity}×</span>
-                    <span className="flex-1 min-w-0 truncate text-gray-200" title={partName(it)}>{partName(it)}</span>
+                    <span className="flex-1 min-w-0 flex items-baseline gap-2" title={[partName(it), it.impex_part?.part_no].filter(Boolean).join(' · ')}>
+                      <span className="truncate text-gray-200">{partName(it)}</span>
+                      {/* Código Kawasaki al lado del nombre que le pusiste */}
+                      {it.impex_part?.part_no && partName(it) !== it.impex_part.part_no && (
+                        <span className="shrink-0 font-mono text-[11px] text-kawa-green/80 bg-kawa-green/10 border border-kawa-green/20 rounded px-1.5 py-px">{it.impex_part.part_no}</span>
+                      )}
+                    </span>
                     <span className="text-blue-400 font-mono text-xs shrink-0">{formatUsd(it.unit_price_usd || 0)}</span>
                     {it.impex_part?.kawadojo_price ? (
                       <span className="text-gray-500 font-mono text-xs shrink-0 w-24 text-right">{formatCop(it.impex_part.kawadojo_price)}</span>

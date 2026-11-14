@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
-import { GitCompare, Loader2, PackagePlus, Pencil, Search, Trash2, Trophy, X } from 'lucide-react';
+import { Copy, GitCompare, Loader2, PackagePlus, Pencil, Search, Trash2, Trophy, X } from 'lucide-react';
+import toast from 'react-hot-toast';
 import type { ImpexQuote } from '../types/impex';
 import { formatCop, formatUsd, TAX_FREE_LIMIT_USD } from '../Utils/impexQuoteCalc';
 
@@ -37,6 +38,21 @@ function quoteMetrics(q: ImpexQuote) {
 
 const partName = (it: ImpexQuote['items'][number]) =>
   it.impex_part?.name_es || it.impex_part?.name_en || it.impex_part?.part_no || 'Pieza';
+
+// Igual que en los lotes: nombre y precio de venta en pesos, una fila por unidad
+const copyForExcel = (q: ImpexQuote) => {
+  if (!q.items.length) {
+    toast.error('Esta cotización no tiene piezas');
+    return;
+  }
+  const text = q.items.flatMap((it) => {
+    const row = `${partName(it)}\t${it.impex_part?.kawadojo_price || 0}`;
+    return Array.from({ length: Math.max(1, it.quantity) }, () => row);
+  }).join('\n');
+  navigator.clipboard.writeText(text)
+    .then(() => toast.success(`Copiadas ${q.items.length} piezas de ${q.quote_number}`))
+    .catch(() => toast.error('No se pudo copiar'));
+};
 
 export default function QuoteHistory({ quotes, isDeleting, isConverting, onDelete, onConvert, onEdit }: Props) {
   const [selected, setSelected] = useState<string[]>([]);
@@ -179,6 +195,13 @@ export default function QuoteHistory({ quotes, isDeleting, isConverting, onDelet
                   </p>
                 </div>
                 <div className="flex items-center gap-1 shrink-0">
+                  <button
+                    onClick={() => copyForExcel(q)}
+                    title="Copia nombre y precio de venta de cada unidad para pegar en el Excel"
+                    className="flex items-center gap-1.5 px-2.5 py-1.5 rounded border border-blue-700 bg-blue-900/30 text-blue-300 text-xs hover:bg-blue-900/60"
+                  >
+                    <Copy size={14} /> Copiar lista para Excel
+                  </button>
                   <button onClick={() => onEdit(q)} title="Abrir en el comparador para editarla" className="p-2 rounded text-gray-400 hover:text-white hover:bg-[#2a2a2a]">
                     <Pencil size={16} />
                   </button>

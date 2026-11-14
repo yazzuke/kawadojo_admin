@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { rememberVisit } from '../Utils/nav';
 import {
   ArrowLeft,
   Package,
@@ -75,6 +76,8 @@ export default function OrderInfoPage() {
       setIsLoading(true);
       const data = await orderService.getById(id!);
       setOrder(data);
+      // Para "Lo último que abriste" en el Dashboard
+      rememberVisit(`/orders/${data.id}`, [data.order_number, data.user?.name].filter(Boolean).join(' · '), false);
       setTrackingNumber(data.tracking_number || '');
       setNewStatus(data.status);
     } catch (error) {

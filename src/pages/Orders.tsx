@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
   Package,
   DollarSign,
@@ -34,7 +34,12 @@ export default function OrdersPage() {
   const [filteredOrders, setFilteredOrders] = useState<Order[]>([]);
   const [metrics, setMetrics] = useState<SalesMetrics | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [filters, setFilters] = useState<OrderFilters>({});
+  // El Dashboard puede abrir la lista ya filtrada: /orders?status=paid
+  const [searchParams] = useSearchParams();
+  const [filters, setFilters] = useState<OrderFilters>(() => {
+    const status = searchParams.get('status');
+    return status ? { status } : {};
+  });
   const [searchTerm, setSearchTerm] = useState('');
 
   // Selección para cambiar varias órdenes a la vez

@@ -1,78 +1,8 @@
 import { Outlet, NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import {
-  LayoutDashboard,
-  Package,
-  Tags,
-  LogOut,
-  Menu,
-  X,
-  Bike,
-  ShipWheel,
-  ShoppingBag,
-  TrendingUp,
-  MessageSquare,
-  ReceiptJapaneseYen,
-  BookOpen,
-  Sparkles,
-  Calculator,
-  Layers,
-  Inbox,
-  Users,
-  Store,
-  ListOrdered,
-  ChevronDown,
-  BarChart3,
-  History,
-  type LucideIcon,
-} from 'lucide-react';
-import { useState } from 'react';
-
-interface NavItem { to: string; icon: LucideIcon; label: string }
-interface NavGroup { title: string | null; items: NavItem[] }
-
-// Menú por secciones: lo de la tienda, lo que se vende, lo que se compra y el dinero
-const navGroups: NavGroup[] = [
-  { title: null, items: [{ to: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' }] },
-  {
-    title: 'Ventas y clientes',
-    items: [
-      { to: '/orders', icon: ShoppingBag, label: 'Órdenes' },
-      { to: '/analitica', icon: BarChart3, label: 'Analítica' },
-      { to: '/solicitudes', icon: Inbox, label: 'Pedidos de clientes' },
-      { to: '/users', icon: Users, label: 'Usuarios' },
-      { to: '/reviews', icon: MessageSquare, label: 'Reseñas' },
-    ],
-  },
-  {
-    title: 'Catálogo de la tienda',
-    items: [
-      { to: '/products', icon: Package, label: 'Productos' },
-      { to: '/fichas', icon: Layers, label: 'Fichas' },
-      { to: '/categories', icon: Tags, label: 'Categorías' },
-      { to: '/models', icon: Bike, label: 'Modelos' },
-      { to: '/resale-pricing', icon: ListOrdered, label: 'Precios Lista' },
-    ],
-  },
-  {
-    title: 'Compras e importación',
-    items: [
-      { to: '/impex', icon: ReceiptJapaneseYen, label: 'Impex' },
-      { to: '/impex-cotizaciones', icon: Calculator, label: 'Cotizaciones Impex' },
-      { to: '/batches', icon: ShipWheel, label: 'Lotes' },
-      { to: '/ebay', icon: Store, label: 'eBay' },
-      { to: '/oem', icon: BookOpen, label: 'Catálogo OEM' },
-    ],
-  },
-  {
-    title: 'Dinero y herramientas',
-    items: [
-      { to: '/financial', icon: TrendingUp, label: 'Finanzas' },
-      { to: '/ai', icon: Sparkles, label: 'Asistente IA' },
-      { to: '/historial', icon: History, label: 'Historial de cambios' },
-    ],
-  },
-];
+import { LogOut, Menu, X, ChevronDown } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { navGroups, navItems, canSeeNav, rememberVisit, type NavItem } from '../Utils/nav';
 
 const COLLAPSED_KEY = 'kawadojo.nav.collapsed';
 const loadCollapsed = (): string[] => {
@@ -86,11 +16,13 @@ export default function AdminLayout() {
   const { pathname } = useLocation();
   const [collapsed, setCollapsed] = useState<string[]>(loadCollapsed);
 
-  const canSee = (item: NavItem) => {
-    if (user?.role === 'super_admin') return true;
-    if (user?.role === 'admin') return item.to === '/resale-pricing';
-    return false; // Por seguridad, si hay otro rol
-  };
+  const canSee = (item: NavItem) => canSeeNav(user?.role, item);
+
+  // Anota cada página del menú que abres, para los accesos rápidos del Dashboard
+  useEffect(() => {
+    const item = navItems.find((i) => i.to === pathname);
+    if (item && item.to !== '/dashboard') rememberVisit(item.to, item.label);
+  }, [pathname]);
   const toggleGroup = (title: string) => {
     const next = collapsed.includes(title) ? collapsed.filter(t => t !== title) : [...collapsed, title];
     setCollapsed(next);

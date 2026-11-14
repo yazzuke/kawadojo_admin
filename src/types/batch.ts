@@ -34,6 +34,8 @@ export interface BatchItem {
   unit_cost: number;
   created_at: string;
   product: Product;
+  // Llegó dañado: la pérdida registrada por esta unidad
+  damaged?: { id: string; amount: number; notes: string | null; loss_date: string } | null;
   metrics?: {
     profit_per_unit: number;
     potential_profit: number;
@@ -67,6 +69,7 @@ export interface BatchMetrics {
   total_products: number;
   total_sold: number;
   remaining: number;
+  damaged?: number;
   completion_percentage: number;
   revenue: number;
   profit: number;

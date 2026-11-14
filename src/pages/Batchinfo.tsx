@@ -1,13 +1,17 @@
 import { useEffect, useState } from 'react';
-import { ArrowLeft, Edit2, Trash2, Package, Copy } from 'lucide-react';
+import { ArrowLeft, Edit2, Trash2, Package, Copy, AlertTriangle, Undo2, X } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { batchesService } from '../services/batchesService';
 import { productService } from '../services/productService';
-import type { BatchWithMetrics } from '../types/batch';
+import type { BatchWithMetrics, BatchItem } from '../types/batch';
 import type { Product } from '../types/product';
 import { BATCH_STATUSES } from '../types/batch';
 import BatchModal from '../components/BatchModal';
 import ProductModal from '../components/ProductModal';
+
+// Vendido = ya no está en la tienda y no llegó dañado; disponible = en tienda o en camino
+const isSold = (item: BatchItem) => !item.damaged && !item.product.in_stock && !item.product.is_incoming;
+const isAvailable = (item: BatchItem) => !item.damaged && (item.product.in_stock || item.product.is_incoming);
 
 interface BatchInfoPageProps {
   batchId: string;
@@ -22,7 +26,12 @@ export default function BatchInfoPage({ batchId, onBack, onDeleted }: BatchInfoP
   const [isProductModalOpen, setIsProductModalOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState(false);
-  const [stockFilter, setStockFilter] = useState<'all' | 'sold' | 'available'>('all');
+  const [stockFilter, setStockFilter] = useState<'all' | 'sold' | 'available' | 'damaged'>('all');
+  // Unidad que se está marcando como dañada
+  const [damageItem, setDamageItem] = useState<BatchItem | null>(null);
+  const [damageAmount, setDamageAmount] = useState('');
+  const [damageNotes, setDamageNotes] = useState('');
+  const [damageSaving, setDamageSaving] = useState(false);
 
   useEffect(() => {
     if (batchId) {
@@ -91,7 +100,8 @@ export default function BatchInfoPage({ batchId, onBack, onDeleted }: BatchInfoP
     }
 
     try {
-      const productIds = batch.items.map(item => item.product_id);
+      // Las unidades dañadas no se tocan: no deben volver a la tienda
+      const productIds = batch.items.filter(item => !item.damaged).map(item => item.product_id);
       await productService.batchUpdateProducts(productIds, updates);
       loadBatch(); // Recargar para ver los cambios
     } catch (error) {
@@ -125,9 +135,11 @@ export default function BatchInfoPage({ batchId, onBack, onDeleted }: BatchInfoP
     
     switch (stockFilter) {
       case 'sold':
-        return batch.items.filter(item => !item.product.in_stock && !item.product.is_incoming);
+        return batch.items.filter(isSold);
       case 'available':
-        return batch.items.filter(item => item.product.in_stock || item.product.is_incoming);
+        return batch.items.filter(isAvailable);
+      case 'damaged':
+        return batch.items.filter(item => item.damaged);
       default:
         return batch.items;
     }
@@ -155,8 +167,45 @@ export default function BatchInfoPage({ batchId, onBack, onDeleted }: BatchInfoP
     toast.success(`Copiados ${itemsToCopy.length} productos al portapapeles`);
   };
 
-  const soldCount = batch?.items.filter(item => !item.product.in_stock && !item.product.is_incoming).length || 0;
-  const availableCount = batch?.items.filter(item => item.product.in_stock || item.product.is_incoming).length || 0;
+  const soldCount = batch?.items.filter(isSold).length || 0;
+  const availableCount = batch?.items.filter(isAvailable).length || 0;
+  const damagedCount = batch?.items.filter(item => item.damaged).length || 0;
+
+  const openDamage = (item: BatchItem) => {
+    setDamageItem(item);
+    setDamageAmount('');
+    setDamageNotes('');
+  };
+
+  const saveDamage = async () => {
+    if (!batch || !damageItem) return;
+    const amount = damageAmount.trim() === '' ? undefined : Number(damageAmount.replace(/\D/g, ''));
+    setDamageSaving(true);
+    try {
+      await batchesService.markDamaged(batch.id, damageItem.id, { amount, notes: damageNotes.trim() || undefined });
+      toast.success('Marcado como dañado. Ya no aparece en la tienda y su costo quedó como pérdida.');
+      setDamageItem(null);
+      await loadBatch();
+    } catch (err: unknown) {
+      const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message;
+      toast.error(msg || 'No se pudo marcar como dañado');
+    } finally {
+      setDamageSaving(false);
+    }
+  };
+
+  const undoDamage = async (item: BatchItem) => {
+    if (!batch) return;
+    if (!window.confirm('¿Quitar la marca de dañado? Se borra la pérdida y el producto vuelve a estar disponible en la tienda.')) return;
+    try {
+      await batchesService.unmarkDamaged(batch.id, item.id);
+      toast.success('Listo, ya no está marcado como dañado');
+      await loadBatch();
+    } catch (err: unknown) {
+      const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message;
+      toast.error(msg || 'No se pudo deshacer');
+    }
+  };
 
   if (isLoading) {
     return (
@@ -244,6 +293,9 @@ export default function BatchInfoPage({ batchId, onBack, onDeleted }: BatchInfoP
         <div className="bg-yellow-900 bg-opacity-30 p-4 rounded-lg border border-yellow-800">
           <p className="text-sm text-gray-400">Restantes</p>
           <p className="text-2xl font-bold text-yellow-400">{batch.metrics.remaining}</p>
+          {!!batch.metrics.damaged && (
+            <p className="text-xs text-orange-400 mt-1">{batch.metrics.damaged} {batch.metrics.damaged === 1 ? 'llegó dañado' : 'llegaron dañados'}</p>
+          )}
         </div>
         <div className="bg-purple-900 bg-opacity-30 p-4 rounded-lg border border-purple-800">
           <p className="text-sm text-gray-400">Completado</p>
@@ -442,12 +494,24 @@ export default function BatchInfoPage({ batchId, onBack, onDeleted }: BatchInfoP
             >
               Disponibles ({availableCount})
             </button>
+            {damagedCount > 0 && (
+              <button
+                onClick={() => setStockFilter('damaged')}
+                className={`px-4 py-2 rounded-lg transition-colors ${
+                  stockFilter === 'damaged'
+                    ? 'bg-orange-600 text-white font-semibold'
+                    : 'bg-kawa-black text-gray-400 hover:text-white'
+                }`}
+              >
+                Dañados ({damagedCount})
+              </button>
+            )}
           </div>
         </div>
         <div className="space-y-3">
           {getFilteredItems().length === 0 ? (
             <div className="text-center py-8 text-gray-400">
-              No hay productos {stockFilter === 'sold' ? 'vendidos' : stockFilter === 'available' ? 'disponibles' : ''} en este lote
+              No hay productos {stockFilter === 'sold' ? 'vendidos' : stockFilter === 'available' ? 'disponibles' : stockFilter === 'damaged' ? 'dañados' : ''} en este lote
             </div>
           ) : (
             getFilteredItems().map((item) => (
@@ -472,6 +536,14 @@ export default function BatchInfoPage({ batchId, onBack, onDeleted }: BatchInfoP
                         <Copy size={14} />
                       </button>
                     </div>
+                    {item.damaged ? (
+                      <span
+                        className="px-2 py-1 text-xs font-semibold rounded bg-orange-950 text-orange-300 border border-orange-600 inline-flex items-center gap-1"
+                        title={item.damaged.notes || undefined}
+                      >
+                        <AlertTriangle size={12} /> Dañado · pérdida {formatCurrency(item.damaged.amount)}
+                      </span>
+                    ) : (
                     <span className={`px-2 py-1 text-xs font-semibold rounded ${
                       item.product.is_incoming
                         ? 'bg-orange-900 bg-opacity-50 text-orange-400 border border-orange-700'
@@ -481,7 +553,8 @@ export default function BatchInfoPage({ batchId, onBack, onDeleted }: BatchInfoP
                     }`}>
                       {item.product.is_incoming ? 'En Camino' : (item.product.in_stock ? 'Disponible' : 'Vendido')}
                     </span>
-                    {!item.product.is_incoming && !item.product.in_stock && item.product.order_items && item.product.order_items.length > 0 && (
+                    )}
+                    {!item.damaged && !item.product.is_incoming && !item.product.in_stock && item.product.order_items && item.product.order_items.length > 0 && (
                       <a
                         href={`/orders/${item.product.order_items[0].order.id}`}
                         target="_blank"
@@ -497,6 +570,9 @@ export default function BatchInfoPage({ batchId, onBack, onDeleted }: BatchInfoP
                   <p className="text-sm text-gray-400 mt-1">
                     Cantidad: {item.quantity} unidades
                   </p>
+                  {item.damaged?.notes && (
+                    <p className="text-xs text-orange-300/80 mt-1">Nota: {item.damaged.notes}</p>
+                  )}
                 </div>
                 <div className="text-right space-y-2">
                   <div>
@@ -513,6 +589,25 @@ export default function BatchInfoPage({ batchId, onBack, onDeleted }: BatchInfoP
                     <Edit2 size={14} />
                     Editar
                   </button>
+                  {item.damaged ? (
+                    <button
+                      type="button"
+                      onClick={() => undoDamage(item)}
+                      className="flex items-center gap-1 ml-auto text-xs text-gray-400 hover:text-white"
+                      title="Borra la pérdida y lo vuelve a poner disponible"
+                    >
+                      <Undo2 size={12} /> No estaba dañado
+                    </button>
+                  ) : isAvailable(item) && (
+                    <button
+                      type="button"
+                      onClick={() => openDamage(item)}
+                      className="flex items-center gap-1 ml-auto text-xs text-orange-400 hover:text-orange-300"
+                      title="Llegó dañado: sale de la tienda y su costo queda como pérdida"
+                    >
+                      <AlertTriangle size={12} /> Llegó dañado
+                    </button>
+                  )}
                 </div>
               </div>
               
@@ -529,15 +624,15 @@ export default function BatchInfoPage({ batchId, onBack, onDeleted }: BatchInfoP
                   </div>
                   <div>
                     <p className="text-xs text-gray-500">Ganancia/Unidad</p>
-                    <p className="text-sm font-medium text-green-400">{formatCurrency(item.metrics.profit_per_unit)}</p>
+                    <p className={`text-sm font-medium ${item.metrics.profit_per_unit < 0 ? 'text-red-400' : 'text-green-400'}`}>{formatCurrency(item.metrics.profit_per_unit)}</p>
                   </div>
                   <div>
                     <p className="text-xs text-gray-500">Ganancia Total</p>
-                    <p className="text-sm font-bold text-kawa-green">{formatCurrency(item.metrics.potential_profit)}</p>
+                    <p className={`text-sm font-bold ${item.metrics.potential_profit < 0 ? 'text-red-400' : 'text-kawa-green'}`}>{formatCurrency(item.metrics.potential_profit)}</p>
                   </div>
                   <div>
                     <p className="text-xs text-gray-500">Margen</p>
-                    <p className="text-sm font-bold text-yellow-400">{item.metrics.margin_percentage.toFixed(1)}%</p>
+                    <p className={`text-sm font-bold ${item.metrics.margin_percentage < 0 ? 'text-red-400' : 'text-yellow-400'}`}>{item.metrics.margin_percentage.toFixed(1)}%</p>
                   </div>
                 </div>
               )}
@@ -562,6 +657,69 @@ export default function BatchInfoPage({ batchId, onBack, onDeleted }: BatchInfoP
           onClose={() => setIsModalOpen(false)}
           onSuccess={handleModalSuccess}
         />
+      )}
+
+      {/* Marcar como dañado */}
+      {damageItem && (
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
+          <div className="bg-kawa-gray rounded-xl max-w-md w-full border border-gray-800">
+            <div className="p-4 border-b border-gray-800 flex justify-between items-center">
+              <h2 className="text-lg font-bold text-white inline-flex items-center gap-2">
+                <AlertTriangle size={20} className="text-orange-400" /> Llegó dañado
+              </h2>
+              <button onClick={() => setDamageItem(null)} className="text-gray-400 hover:text-white">
+                <X size={22} />
+              </button>
+            </div>
+            <div className="p-5 space-y-4">
+              <p className="text-sm text-gray-300">{damageItem.product.name}</p>
+              <ul className="text-xs text-gray-400 space-y-1 list-disc pl-4">
+                <li>Sale de la tienda (queda agotado) para que nadie lo compre.</li>
+                <li>Su costo se registra como pérdida "Producto dañado" y baja la ganancia en Finanzas.</li>
+                <li>En el lote deja de contarse como pendiente por vender.</li>
+              </ul>
+              <div>
+                <label className="block text-sm text-gray-300 mb-1">¿Cuánto perdiste?</label>
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  value={damageAmount}
+                  onChange={(e) => setDamageAmount(e.target.value)}
+                  placeholder="Vacío = lo que costó puesto aquí"
+                  className="w-full px-3 py-2 bg-kawa-black border border-gray-700 rounded-lg text-white focus:outline-none focus:border-kawa-green"
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  Si lo dejas vacío se usa el costo con envío y aduana incluidos. Si el vendedor te devolvió algo o lo vas a vender barato para repuestos, pon solo lo que de verdad perdiste.
+                </p>
+              </div>
+              <div>
+                <label className="block text-sm text-gray-300 mb-1">Nota (opcional)</label>
+                <input
+                  type="text"
+                  value={damageNotes}
+                  onChange={(e) => setDamageNotes(e.target.value)}
+                  placeholder="ej: vino con un imán suelto"
+                  className="w-full px-3 py-2 bg-kawa-black border border-gray-700 rounded-lg text-white focus:outline-none focus:border-kawa-green"
+                />
+              </div>
+              <div className="flex gap-3 pt-2">
+                <button
+                  onClick={() => setDamageItem(null)}
+                  className="flex-1 py-2 border border-gray-700 rounded-lg text-white hover:bg-gray-800"
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={saveDamage}
+                  disabled={damageSaving}
+                  className="flex-1 py-2 bg-orange-600 hover:bg-orange-700 rounded-lg text-white font-semibold disabled:opacity-50"
+                >
+                  {damageSaving ? 'Guardando...' : 'Marcar como dañado'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
       )}
 
       {isProductModalOpen && editingProduct && (

@@ -71,6 +71,16 @@ export const batchesService = {
     await api.patch(`/batches/${batchId}/items/${itemId}`, { quantity });
   },
 
+  // Marcar una unidad como dañada: sale de la tienda y su costo queda como pérdida.
+  // Si no mandas monto, el servidor usa lo que costó puesto en Colombia.
+  async markDamaged(batchId: string, itemId: string, data: { amount?: number; notes?: string }): Promise<void> {
+    await api.post(`/batches/${batchId}/items/${itemId}/damaged`, data);
+  },
+
+  async unmarkDamaged(batchId: string, itemId: string): Promise<void> {
+    await api.delete(`/batches/${batchId}/items/${itemId}/damaged`);
+  },
+
   async moveItem(fromBatchId: string, itemId: string, toBatchId: string, unitCost?: number): Promise<any> {
     const response = await api.post(`/batches/${fromBatchId}/items/${itemId}/move`, {
       to_batch_id: toBatchId,

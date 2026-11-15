@@ -71,7 +71,122 @@ export const analyticsService = {
     const { data } = await api.get('/analytics/audit', { params: filters });
     return data.data;
   },
+  async customer(userId: string): Promise<CustomerActivity> {
+    const { data } = await api.get(`/analytics/customers/${userId}`);
+    return data.data;
+  },
+  async interested(from: string, to: string): Promise<InterestedCustomer[]> {
+    const { data } = await api.get('/analytics/interested', { params: { from, to } });
+    return data.data;
+  },
 };
+
+export interface ActivityProduct {
+  id: string;
+  name: string;
+  slug: string | null;
+  price: number | null;
+  in_stock: boolean | null;
+}
+
+export interface CustomerActivity {
+  user: {
+    id: string;
+    name: string | null;
+    email: string;
+    phone: string | null;
+    moto: string | null;
+    created_at: string | null;
+    last_login: string | null;
+    orders_count: number;
+    recent_orders: { id: string; created_at: string | null; total: number; status: string }[];
+  };
+  summary: {
+    visits: number;
+    first_seen: string | null;
+    last_seen: string | null;
+    page_views: number;
+    product_views: number;
+    whatsapp_clicks: number;
+    add_to_cart: number;
+    searches: number;
+  };
+  products: (ActivityProduct & { views: number; whatsapp_clicks: number; add_to_cart: number; score: number; last_seen: string; path: string | null })[];
+  cart: (ActivityProduct & { quantity: number; added_at: string | null })[];
+  searches: { query: string; count: number }[];
+  visits: {
+    start: string;
+    end: string;
+    source: string;
+    device: string | null;
+    events: { at: string; type: string; path: string; query: string | null; product: string | null }[];
+  }[];
+}
+
+export interface InterestedCustomer {
+  id: string;
+  name: string | null;
+  email: string;
+  phone: string | null;
+  moto: string | null;
+  visits: number;
+  last_seen: string;
+  whatsapp_clicks: number;
+  last_order_at: string | null;
+  products: (ActivityProduct & { in_cart: boolean })[];
+}
+
+/** Link de WhatsApp al cliente con el mensaje listo. Celulares de Colombia: 3xx xxx xxxx → 57… */
+export function customerWhatsapp(phone: string | null, message: string): string | null {
+  const digits = (phone ?? '').replace(/\D/g, '');
+  const number = digits.length === 10 && digits.startsWith('3') ? `57${digits}` : digits.length >= 11 ? digits : null;
+  return number ? `https://wa.me/${number}?text=${encodeURIComponent(message)}` : null;
+}
+
+/** Mensaje para escribirle a un cliente por la pieza que le interesó */
+export function followUpMessage(name: string | null, product: { name: string; in_cart?: boolean } | undefined): string {
+  const hello = `Hola${name ? ` ${name.split(' ')[0]}` : ''}! Te escribimos de KawaDojo.`;
+  if (!product) return `${hello} ¿Te podemos ayudar con algún repuesto para tu moto?`;
+  return product.in_cart
+    ? `${hello} Vimos que dejaste ${product.name} en el carrito. ¿Te ayudamos a terminar el pedido? Te confirmamos que le sirve a tu moto.`
+    : `${hello} ¿Te podemos ayudar con ${product.name}? Te confirmamos que le sirve a tu moto y cómo te llega.`;
+}
+
+export const EVENT_LABELS: Record<string, string> = {
+  page_view: 'Entró a',
+  product_view: 'Miró la pieza',
+  whatsapp_click: 'Le dio clic a WhatsApp',
+  add_to_cart: 'Agregó al carrito',
+  checkout_start: 'Fue a pagar',
+  order_placed: 'Hizo un pedido',
+  search: 'Buscó',
+};
+
+/** Nombre corto de una página de la tienda */
+export function pageLabel(path: string): string {
+  if (path === '/') return 'Inicio';
+  const named: Record<string, string> = {
+    '/login': 'Iniciar sesión',
+    '/complete-profile': 'Completar perfil',
+    '/perfil': 'Su perfil',
+    '/mis-pedidos': 'Sus pedidos',
+    '/checkout': 'Pago',
+    '/stock': 'Stock',
+    '/guias': 'Guías',
+    '/resenas': 'Reseñas',
+    '/envios-y-devoluciones': 'Envíos y devoluciones',
+  };
+  if (named[path]) return named[path];
+  const m = path.match(/^\/(motos|categorias|guias)\/(.+)$/);
+  if (m) {
+    const kind = m[1] === 'motos' ? 'Moto' : m[1] === 'categorias' ? 'Categoría' : 'Guía';
+    return `${kind}: ${m[2].replace(/-/g, ' ')}`;
+  }
+  return path;
+}
+
+export const formatWhen = (iso: string | null) =>
+  iso ? new Date(iso).toLocaleString('es-CO', { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' }) : '—';
 
 // Nombres en español para lo que guarda el backend
 export const ENTITY_LABELS: Record<string, string> = {

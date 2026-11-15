@@ -4,6 +4,7 @@ import { userService } from '../services/userService';
 import UserOrdersModal from '../components/UserOrdersModal';
 import CreateUserModal from '../components/CreateUserModal';
 import CreateOrderModal from '../components/CreateOrderModal';
+import CustomerActivityModal from '../components/CustomerActivityModal';
 
 // Los clientes que creas a mano quedan con un correo inventado @kawacustomer.com
 const isManual = (email: string) => email.endsWith('@kawacustomer.com');
@@ -31,6 +32,7 @@ const Users: React.FC = () => {
   
   const [showCreateUser, setShowCreateUser] = useState(false);
   const [orderUser, setOrderUser] = useState<User | null>(null);
+  const [activityUserId, setActivityUserId] = useState<string | null>(null);
 
   useEffect(() => {
     // Si buscamos, lo ideal es siempre volver a la página 1.
@@ -165,6 +167,15 @@ const Users: React.FC = () => {
                 <tr key={user.id} className="hover:bg-[#2a2a2a] transition-colors">
                   <td className="p-4">
                     <div className="text-sm font-medium text-white">{user.name}</div>
+                    {!isManual(user.email) && (
+                      <button
+                        onClick={() => setActivityUserId(user.id)}
+                        className="mt-1 text-[11px] text-gray-400 hover:text-kawa-green underline-offset-2 hover:underline"
+                        title="Qué ha mirado en kawadojo.com"
+                      >
+                        Ver actividad en la web
+                      </button>
+                    )}
                   </td>
                   <td className="p-4 whitespace-nowrap">
                     {user.created_at ? (() => {
@@ -261,6 +272,8 @@ const Users: React.FC = () => {
           </div>
         </div>
       )}
+
+      <CustomerActivityModal userId={activityUserId} onClose={() => setActivityUserId(null)} />
 
       {/* Modal de Órdenes */}
       <UserOrdersModal

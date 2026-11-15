@@ -109,6 +109,9 @@ export interface UpdateReviewData {
   status?: ReviewStatus;
   is_featured?: boolean;
   admin_caption?: string;
+  customer_name?: string | null;
+  rating?: number | null;
+  comment?: string | null;
 }
 
 // ===== Customer submit =====

@@ -17,7 +17,9 @@ import {
   ChevronDown,
   ChevronUp,
   ExternalLink,
+  Pencil,
 } from 'lucide-react';
+import toast from 'react-hot-toast';
 import { reviewService } from '../services/reviewService';
 import { orderService } from '../services/orderService';
 import type {
@@ -130,6 +132,42 @@ export default function ReviewsPage() {
       loadReviews();
     } catch (error) {
       console.error('Error toggling featured:', error);
+    }
+  };
+
+  // Editar textos y calificación de una reseña
+  const [editing, setEditing] = useState<Review | null>(null);
+  const [editForm, setEditForm] = useState({ admin_caption: '', customer_name: '', rating: 0, comment: '' });
+  const [savingEdit, setSavingEdit] = useState(false);
+
+  const openEdit = (review: Review) => {
+    setEditing(review);
+    setEditForm({
+      admin_caption: review.admin_caption || '',
+      customer_name: review.customer_name || '',
+      rating: review.rating ?? 0,
+      comment: review.comment || '',
+    });
+  };
+
+  const handleSaveEdit = async () => {
+    if (!editing) return;
+    setSavingEdit(true);
+    try {
+      await reviewService.update(editing.id, {
+        admin_caption: editForm.admin_caption.trim(),
+        customer_name: editForm.customer_name.trim() || null,
+        rating: editForm.rating || null,
+        comment: editForm.comment.trim() || null,
+      });
+      toast.success('Reseña actualizada');
+      setEditing(null);
+      loadReviews();
+    } catch (err: unknown) {
+      const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message;
+      toast.error(msg || 'No se pudo guardar la reseña');
+    } finally {
+      setSavingEdit(false);
     }
   };
 
@@ -458,6 +496,15 @@ export default function ReviewsPage() {
 
                   {/* Action buttons */}
                   <div className="flex flex-wrap gap-2 pt-2 border-t border-gray-800">
+                    {/* Editar */}
+                    <button
+                      onClick={() => openEdit(review)}
+                      className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm transition-colors"
+                    >
+                      <Pencil size={14} />
+                      Editar
+                    </button>
+
                     {/* Status change */}
                     {review.status !== 'published' && (
                       <button
@@ -610,6 +657,90 @@ export default function ReviewsPage() {
       )}
 
       {/* ===== UPLOAD MODAL ===== */}
+      {/* Editar reseña */}
+      {editing && (
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
+          <div className="bg-kawa-gray rounded-xl max-w-lg w-full border border-gray-800">
+            <div className="p-4 border-b border-gray-800 flex justify-between items-center">
+              <div>
+                <h2 className="text-lg font-bold text-white">Editar reseña</h2>
+                <p className="text-xs text-gray-500">{editing.order?.order_number}</p>
+              </div>
+              <button onClick={() => setEditing(null)} className="text-gray-400 hover:text-white">
+                <X size={22} />
+              </button>
+            </div>
+            <div className="p-5 space-y-4">
+              <div>
+                <label className="block text-sm text-gray-300 mb-1">Descripción de la entrega</label>
+                <textarea
+                  value={editForm.admin_caption}
+                  onChange={(e) => setEditForm((f) => ({ ...f, admin_caption: e.target.value }))}
+                  rows={2}
+                  placeholder="ej: Entrega de Empaque Carter en Bogotá."
+                  className="w-full px-3 py-2 bg-kawa-black border border-gray-700 rounded-lg text-white text-sm focus:outline-none focus:border-kawa-green"
+                />
+              </div>
+              <div>
+                <label className="block text-sm text-gray-300 mb-1">Nombre que se ve en la tienda</label>
+                <input
+                  type="text"
+                  value={editForm.customer_name}
+                  onChange={(e) => setEditForm((f) => ({ ...f, customer_name: e.target.value }))}
+                  maxLength={100}
+                  placeholder="ej: Cristian L."
+                  className="w-full px-3 py-2 bg-kawa-black border border-gray-700 rounded-lg text-white text-sm focus:outline-none focus:border-kawa-green"
+                />
+              </div>
+              <div>
+                <label className="block text-sm text-gray-300 mb-1">Calificación</label>
+                <div className="flex items-center gap-1">
+                  {[1, 2, 3, 4, 5].map((n) => (
+                    <button
+                      key={n}
+                      type="button"
+                      onClick={() => setEditForm((f) => ({ ...f, rating: f.rating === n ? 0 : n }))}
+                      title={`${n} ${n === 1 ? 'estrella' : 'estrellas'}`}
+                      className="p-0.5"
+                    >
+                      <Star size={24} className={n <= editForm.rating ? 'text-yellow-400 fill-yellow-400' : 'text-gray-600'} />
+                    </button>
+                  ))}
+                  <span className="text-xs text-gray-500 ml-2">
+                    {editForm.rating ? `${editForm.rating} de 5 · clic otra vez para quitarla` : 'Sin calificación'}
+                  </span>
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm text-gray-300 mb-1">Comentario del cliente</label>
+                <textarea
+                  value={editForm.comment}
+                  onChange={(e) => setEditForm((f) => ({ ...f, comment: e.target.value }))}
+                  rows={3}
+                  placeholder="Lo que dijo el cliente"
+                  className="w-full px-3 py-2 bg-kawa-black border border-gray-700 rounded-lg text-white text-sm focus:outline-none focus:border-kawa-green"
+                />
+              </div>
+              <div className="flex gap-3 pt-1">
+                <button
+                  onClick={() => setEditing(null)}
+                  className="flex-1 py-2 border border-gray-700 rounded-lg text-white hover:bg-gray-800"
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={handleSaveEdit}
+                  disabled={savingEdit}
+                  className="flex-1 py-2 bg-kawa-green text-black font-bold rounded-lg hover:bg-green-500 disabled:opacity-50"
+                >
+                  {savingEdit ? 'Guardando...' : 'Guardar'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {showUploadModal && (
         <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
           <div className="bg-kawa-gray rounded-xl border border-gray-800 w-full max-w-md">

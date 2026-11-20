@@ -1,12 +1,18 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import toast from 'react-hot-toast';
-import { ChevronDown, ChevronRight, Layers, Loader2, RefreshCw, Search, Trash2, X } from 'lucide-react';
+import { ChevronDown, ChevronRight, Layers, Loader2, Plus, RefreshCw, Search, Trash2, X } from 'lucide-react';
 import MasterEditor from '../components/MasterEditor';
 import { categoryService } from '../services/categoryService';
-import { apiError, productMasterService, type MasterProposal, type ProductMaster } from '../services/productMasterService';
+import { apiError, productMasterService, type MasterOptions, type MasterProposal, type ProductMaster } from '../services/productMasterService';
 import type { Category } from '../types/product';
 
 type Tab = 'proposals' | 'masters';
+
+// Ficha desde cero: no hay productos de los que sacar nombres, descripciones ni motos
+const EMPTY_OPTIONS: MasterOptions = {
+  names: [], descriptions: [], full_descriptions: [], oem_codes: [], group_tags: [],
+  category_id: null, photo_product_id: null, models: [],
+};
 
 const Badge = ({ tone, children }: { tone: 'yellow' | 'red' | 'gray' | 'blue'; children: React.ReactNode }) => {
   const cls = {
@@ -27,6 +33,8 @@ export default function ProductMastersPage() {
   const [loading, setLoading] = useState(true);
   const [open, setOpen] = useState<string | null>(null);
   const [search, setSearch] = useState('');
+  // Ficha nueva desde cero (pieza que nunca has tenido)
+  const [creating, setCreating] = useState(false);
 
   const load = useCallback(async () => {
     try {
@@ -44,7 +52,7 @@ export default function ProductMastersPage() {
 
   useEffect(() => { load(); }, [load]);
 
-  const done = () => { setOpen(null); load(); };
+  const done = () => { setOpen(null); setCreating(false); load(); };
 
   const q = search.trim().toLowerCase();
   const visibleProposals = useMemo(
@@ -98,10 +106,31 @@ export default function ProductMastersPage() {
             siguen igual (costo, precio, lote, vendido), solo quedan vinculados a su ficha.
           </p>
         </div>
-        <button onClick={load} disabled={loading} className="flex items-center gap-2 text-sm text-gray-300 hover:text-white px-3 py-2 border border-gray-700 rounded-lg">
-          <RefreshCw size={14} className={loading ? 'animate-spin' : ''} /> Recargar
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setCreating(c => !c)}
+            className="flex items-center gap-2 text-sm font-semibold bg-kawa-green text-black px-3 py-2 rounded-lg hover:bg-kawa-green-light"
+          >
+            <Plus size={15} /> Nueva ficha
+          </button>
+          <button onClick={load} disabled={loading} className="flex items-center gap-2 text-sm text-gray-300 hover:text-white px-3 py-2 border border-gray-700 rounded-lg">
+            <RefreshCw size={14} className={loading ? 'animate-spin' : ''} /> Recargar
+          </button>
+        </div>
       </div>
+
+      {creating && (
+        <div className="bg-kawa-gray border border-kawa-green/40 rounded-xl">
+          <div className="flex items-center justify-between px-4 pt-4">
+            <div>
+              <h2 className="text-white font-semibold">Nueva ficha</h2>
+              <p className="text-xs text-gray-500">Para una pieza que todavía no tienes en la tienda. Los productos se le ligan cuando lleguen.</p>
+            </div>
+            <button onClick={() => setCreating(false)} className="text-gray-400 hover:text-white"><X size={20} /></button>
+          </div>
+          <MasterEditor products={[]} options={EMPTY_OPTIONS} categories={categories} onDone={done} />
+        </div>
+      )}
 
       <div className="flex flex-wrap items-center gap-3">
         <div className="flex bg-kawa-gray border border-gray-800 rounded-xl p-1">

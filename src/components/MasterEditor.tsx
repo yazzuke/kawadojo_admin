@@ -149,8 +149,36 @@ export default function MasterEditor({ products: rawProducts, options, categorie
     }
   };
 
+  // Ficha nueva sin productos todavía (ej. una pieza que nunca has tenido)
+  const standalone = rawProducts.length === 0;
+
   const submit = async () => {
     if (!name.trim()) { toast.error('Ponle un nombre a la ficha'); return; }
+    if (standalone) {
+      try {
+        setSaving(true);
+        await productMasterService.unify({
+          master_id: initial?.master_id ?? null,
+          name: name.trim(),
+          group_tag: effectiveTag,
+          description: description.trim() || null,
+          full_description: fullDescription.trim() || null,
+          category_id: categoryId || null,
+          oem_code: oem.trim() || null,
+          photo_product_id: null,
+          model_ids: [],
+          product_ids: [],
+          apply: {},
+        });
+        toast.success(initial?.master_id ? 'Ficha guardada' : `Ficha "${name.trim()}" creada`);
+        onDone();
+      } catch (err) {
+        toast.error(apiError(err, 'No se pudo guardar la ficha'));
+      } finally {
+        setSaving(false);
+      }
+      return;
+    }
     if (!chosen.length) { toast.error('Marca al menos un producto'); return; }
     const parts = [
       apply.name && renames ? `renombrar ${renames}` : null,
@@ -307,6 +335,10 @@ export default function MasterEditor({ products: rawProducts, options, categorie
                 </button>
               ))}
             </div>
+          ) : standalone ? (
+            <p className="text-sm text-gray-500">
+              Las fotos se agregan cuando exista el primer producto de esta pieza (en Productos con "Desde una ficha", o al convertir la cotización de Impex en lote).
+            </p>
           ) : (
             <p className="text-sm text-gray-500">Ningún producto del grupo tiene fotos todavía.</p>
           )}
@@ -338,6 +370,27 @@ export default function MasterEditor({ products: rawProducts, options, categorie
       </div>
 
       {/* Columna 2: productos y qué se aplica */}
+      {standalone ? (
+        <div className="space-y-5">
+          <Section title="Productos">
+            <div className="bg-[#1a1a1a] border border-gray-800 rounded-lg p-4 text-sm text-gray-300 space-y-2">
+              <p>Esta ficha todavía no tiene productos. Cuando te lleguen las piezas:</p>
+              <ul className="list-disc pl-5 text-gray-400 space-y-1">
+                <li>En <b className="text-gray-200">Productos → Nuevo producto → Desde una ficha</b>, escoges esta ficha y se llenan solos el nombre y la descripción.</li>
+                <li>O en <b className="text-gray-200">Impex</b>, liga el repuesto a esta ficha y al convertir la cotización en lote los productos salen con su nombre.</li>
+              </ul>
+            </div>
+          </Section>
+          <button
+            onClick={submit}
+            disabled={saving || !name.trim()}
+            className="w-full flex items-center justify-center gap-2 bg-kawa-green text-black font-bold px-4 py-2.5 rounded-lg hover:bg-kawa-green-light disabled:opacity-50"
+          >
+            {saving && <Loader2 size={16} className="animate-spin" />}
+            {initial?.master_id ? 'Guardar ficha' : 'Crear ficha'}
+          </button>
+        </div>
+      ) : (
       <div className="space-y-5">
         <Section title={`Productos (${chosen.length} de ${products.length})`}>
           <div className="border border-gray-800 rounded-lg divide-y divide-gray-800 max-h-[460px] overflow-y-auto">
@@ -408,6 +461,7 @@ export default function MasterEditor({ products: rawProducts, options, categorie
           {submitLabel || 'Crear ficha'} con {chosen.length} productos
         </button>
       </div>
+      )}
     </div>
   );
 }

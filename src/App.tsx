@@ -22,6 +22,7 @@ import ResalePricingPage from './pages/ResalePricing';
 import AiCompatibilityPage from './pages/AiCompatibility';
 import ImpexQuotesPage from './pages/ImpexQuotes';
 import ProductMastersPage from './pages/ProductMasters';
+import KitsPage from './pages/Kits';
 import CustomerRequestsPage from './pages/CustomerRequests';
 import AnalyticsPage from './pages/Analytics';
 import AuditLogPage from './pages/AuditLog';
@@ -58,6 +59,7 @@ function App() {
               <Route path="/ai" element={<AiCompatibilityPage />} />
               <Route path="/impex-cotizaciones" element={<ImpexQuotesPage />} />
               <Route path="/fichas" element={<ProductMastersPage />} />
+              <Route path="/kits" element={<KitsPage />} />
               <Route path="/solicitudes" element={<CustomerRequestsPage />} />
               <Route path="/analitica" element={<AnalyticsPage />} />
               <Route path="/historial" element={<AuditLogPage />} />

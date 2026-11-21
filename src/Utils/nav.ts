@@ -12,6 +12,7 @@ import {
   Sparkles,
   Calculator,
   Layers,
+  Boxes,
   Inbox,
   Users,
   Store,
@@ -42,6 +43,7 @@ export const navGroups: NavGroup[] = [
     items: [
       // Catálogo: lo que ve el cliente (una ficha por pieza). Inventario: cada unidad con su costo y lote
       { to: '/fichas', icon: Layers, label: 'Catálogo' },
+      { to: '/kits', icon: Boxes, label: 'Kits' },
       { to: '/products', icon: Package, label: 'Inventario' },
       { to: '/categories', icon: Tags, label: 'Categorías' },
       { to: '/models', icon: Bike, label: 'Modelos' },

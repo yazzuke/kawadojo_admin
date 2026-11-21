@@ -1,7 +1,8 @@
 import  { useState, useEffect } from 'react';
 import api from '../services/api';
 import { toast } from 'react-hot-toast';
-import { X, Search, Plus, Trash2 } from 'lucide-react';
+import { X, Search, Plus, Trash2, Boxes } from 'lucide-react';
+import { kitService, type Kit } from '../services/kitService';
 
 interface CreateOrderModalProps {
   isOpen: boolean;
@@ -16,6 +17,7 @@ interface SelectedItem {
   quantity: number;
   negotiated_price: number;
   stock: number;
+  kit?: string; // Nombre del kit si la pieza entró como parte de un combo
 }
 
 export default function CreateOrderModal({ isOpen, onClose, user, onSuccess }: CreateOrderModalProps) {
@@ -29,6 +31,14 @@ export default function CreateOrderModal({ isOpen, onClose, user, onSuccess }: C
   const [status, setStatus] = useState('paid');
   const [paymentMethod, setPaymentMethod] = useState('transfer');
   const [adminNotes, setAdminNotes] = useState('Venta cerrada por WhatsApp');
+  const [kits, setKits] = useState<Kit[]>([]);
+  const [addingKit, setAddingKit] = useState(false);
+
+  // Kits que se pueden armar con el inventario de hoy
+  useEffect(() => {
+    if (!isOpen) return;
+    kitService.list().then(list => setKits(list.filter(k => k.active))).catch(() => setKits([]));
+  }, [isOpen]);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -68,6 +78,31 @@ export default function CreateOrderModal({ isOpen, onClose, user, onSuccess }: C
       stock: 1 // Tratamos stock como 1 para la venta (asumen q hay 1 si in_stock es true)
     }]);
     setSearchTerm(''); // clear search
+  };
+
+  // Agrega todas las piezas del kit (las de lotes más viejos) con el precio del combo repartido
+  const addKit = async (kitId: string) => {
+    if (!kitId) return;
+    try {
+      setAddingKit(true);
+      const pick = await kitService.pick(kitId, 1);
+      const repeated = pick.items.filter(i => selectedItems.some(s => s.product_id === i.product_id));
+      if (repeated.length) {
+        toast.error('Algunas piezas del kit ya están en la lista. Quítalas primero.');
+        return;
+      }
+      setSelectedItems(items => [
+        ...items,
+        ...pick.items.map(i => ({ product_id: i.product_id, name: i.name, quantity: 1, negotiated_price: i.negotiated_price, stock: 1, kit: pick.kit.name })),
+      ]);
+      setAdminNotes(n => (n.includes(pick.kit.name) ? n : `${n}${n ? ' · ' : ''}Kit: ${pick.kit.name}`));
+      toast.success(`Kit agregado: ${pick.items.length} piezas por $${pick.total.toLocaleString('es-CO')}`);
+    } catch (error: unknown) {
+      const msg = (error as { response?: { data?: { message?: string } } })?.response?.data?.message;
+      toast.error(msg || 'No se pudo agregar el kit');
+    } finally {
+      setAddingKit(false);
+    }
   };
 
   const updateItem = (id: string, field: keyof SelectedItem, value: number) => {
@@ -128,6 +163,25 @@ export default function CreateOrderModal({ isOpen, onClose, user, onSuccess }: C
           
           {/* Lado Izquierdo: Buscador de Productos */}
           <div className="w-full lg:w-1/2 border-r border-gray-800 flex flex-col p-4 bg-[#161616]">
+            {kits.length > 0 && (
+              <div className="mb-3 flex items-center gap-2">
+                <Boxes size={18} className="text-kawa-green shrink-0" />
+                <select
+                  value=""
+                  disabled={addingKit}
+                  onChange={e => addKit(e.target.value)}
+                  className="flex-1 bg-[#1e1e1e] border border-gray-700 text-white rounded-lg px-3 py-2 text-sm focus:border-kawa-green focus:outline-none disabled:opacity-50"
+                >
+                  <option value="">{addingKit ? 'Agregando kit...' : 'Agregar kit…'}</option>
+                  {kits.map(k => (
+                    <option key={k.id} value={k.id} disabled={k.kits_possible < 1}>
+                      {k.name} · ${k.price.toLocaleString('es-CO')} · {k.kits_possible ? `${k.kits_possible} disp.` : 'no alcanza'}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+
             <div className="relative mb-4">
               <input
                 type="text"
@@ -175,7 +229,10 @@ export default function CreateOrderModal({ isOpen, onClose, user, onSuccess }: C
                 selectedItems.map(item => (
                   <div key={item.product_id} className="bg-[#1e1e1e] border border-gray-700 p-3 rounded-lg">
                     <div className="flex justify-between items-start mb-3">
-                      <p className="text-white text-sm font-bold line-clamp-2">{item.name}</p>
+                      <div>
+                        <p className="text-white text-sm font-bold line-clamp-2">{item.name}</p>
+                        {item.kit && <p className="text-[11px] text-kawa-green">Parte de: {item.kit}</p>}
+                      </div>
                       <button onClick={() => removeItem(item.product_id)} className="text-red-500 hover:text-red-400">
                         <Trash2 size={16} />
                       </button>

@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
-import { Plus, Pencil, Trash2, Search, X, Copy } from 'lucide-react';
+import { Plus, Pencil, Trash2, Search, X, Copy, Layers, Loader2 } from 'lucide-react';
+import toast from 'react-hot-toast';
 import { productService } from '../services/productService';
+import { apiError, productMasterService } from '../services/productMasterService';
 import { categoryService } from '../services/categoryService';
 import type { Product, Category } from '../types/product';
 import ProductModal from '../components/ProductModal';
@@ -20,6 +22,13 @@ export default function ProductsPage() {
   const [tagFilter, setTagFilter] = useState<string>('all');
   const [oemFilter, setOemFilter] = useState<string>('all');
   const [availableOems, setAvailableOems] = useState<string[]>([]);
+  // Fichas del Catálogo: para ver qué unidades ya están ligadas y ligar las que falten
+  const [masters, setMasters] = useState<Array<{ id: string; name: string; oem_code: string | null }>>([]);
+  const [masterFilter, setMasterFilter] = useState<'all' | 'with' | 'without'>('all');
+  const [isLinkModalOpen, setIsLinkModalOpen] = useState(false);
+  const [linkMasterId, setLinkMasterId] = useState('');
+  const [linkApplyData, setLinkApplyData] = useState(true);
+  const [isLinking, setIsLinking] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [duplicateData, setDuplicateData] = useState<Partial<Product> | undefined>(undefined);
@@ -67,24 +76,31 @@ export default function ProductsPage() {
         (tagFilter === 'untagged' && !product.group_tag) ||
         (tagFilter === product.group_tag);
 
+      const matchesMaster =
+        masterFilter === 'all' ||
+        (masterFilter === 'with' && Boolean(product.master_id)) ||
+        (masterFilter === 'without' && !product.master_id);
+
       const matchesOem =
         oemFilter === 'all' ||
         (oemFilter === 'with_oem' && Boolean(product.oem_code)) ||
         (oemFilter === 'without_oem' && !product.oem_code) ||
         (product.oem_code === oemFilter);
         
-      return matchesSearch && matchesStock && matchesTag && matchesOem;
+      return matchesSearch && matchesStock && matchesTag && matchesOem && matchesMaster;
     });
     setFilteredProducts(filtered);
-  }, [searchTerm, stockFilter, tagFilter, oemFilter, products]);
+  }, [searchTerm, stockFilter, tagFilter, oemFilter, masterFilter, products]);
 
   const loadProducts = async () => {
     try {
-      const [data, tagsData, catsData] = await Promise.all([
+      const [data, tagsData, catsData, mastersData] = await Promise.all([
         productService.getAll(),
         productService.getTags(),
         categoryService.getAll(),
+        productMasterService.list().catch(() => []),
       ]);
+      setMasters(mastersData.map(m => ({ id: m.id, name: m.name, oem_code: m.oem_code })).sort((a, b) => a.name.localeCompare(b.name)));
       setAvailableTags(tagsData);
       const oems = Array.from(new Set(data.map(p => p.oem_code).filter(Boolean) as string[])).sort();
       setAvailableOems(oems);
@@ -208,6 +224,25 @@ export default function ProductsPage() {
       setIsBatchEditing(false);
     }
   };
+  const masterName = (id?: string | null) => (id ? masters.find(m => m.id === id)?.name ?? 'Ficha' : null);
+
+  const handleLink = async () => {
+    if (!linkMasterId) { toast.error('Escoge la ficha'); return; }
+    try {
+      setIsLinking(true);
+      const res = await productMasterService.link(linkMasterId, selectedIds, linkApplyData);
+      toast.success(`${res.linked} ligados a "${masterName(linkMasterId)}"${res.renamed ? ` · ${res.renamed} renombrados` : ''}${res.photos_copied ? ` · fotos en ${res.photos_copied}` : ''}`);
+      setIsLinkModalOpen(false);
+      setLinkMasterId('');
+      setSelectedIds([]);
+      loadProducts();
+    } catch (err) {
+      toast.error(apiError(err, 'No se pudieron ligar'));
+    } finally {
+      setIsLinking(false);
+    }
+  };
+
   const handleDelete = async (id: string) => {
     try {
       await productService.delete(id);
@@ -268,6 +303,13 @@ export default function ProductsPage() {
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" /></svg>
                 Tag ({selectedIds.length})
               </button>
+              <button
+                onClick={() => setIsLinkModalOpen(true)}
+                className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white font-medium rounded-lg hover:bg-emerald-700 transition-colors shadow-lg shadow-emerald-500/20"
+              >
+                <Layers size={20} />
+                Ligar a ficha ({selectedIds.length})
+              </button>
             </>
           )}
           <button
@@ -307,6 +349,18 @@ export default function ProductsPage() {
           </select>
         </div>
 
+        {/* Filtro por ficha del Catálogo */}
+        <div className="flex items-center gap-1 bg-kawa-gray border border-gray-800 rounded-lg p-1">
+          <select
+            value={masterFilter}
+            onChange={(e) => setMasterFilter(e.target.value as 'all' | 'with' | 'without')}
+            className="bg-transparent text-gray-400 hover:text-white px-3 py-2 text-sm font-medium focus:outline-none cursor-pointer appearance-none"
+          >
+            <option value="all" className="bg-kawa-gray">Con y sin ficha</option>
+            <option value="with" className="bg-kawa-gray">Con ficha ({products.filter(p => p.master_id).length})</option>
+            <option value="without" className="bg-kawa-gray">Sin ficha ({products.filter(p => !p.master_id).length})</option>
+          </select>
+        </div>
         {/* Filtro por Código OEM */}
         <div className="flex items-center gap-1 bg-kawa-gray border border-gray-800 rounded-lg p-1">
           <select 
@@ -492,6 +546,15 @@ export default function ProductsPage() {
                 </div>
               </div>
               <h3 className="text-white font-medium truncate">{product.name}</h3>
+              {product.master_id ? (
+                <p className="text-[11px] text-emerald-400 truncate flex items-center gap-1 mt-0.5" title="Ficha del Catálogo">
+                  <Layers size={11} className="shrink-0" /> {masterName(product.master_id)}
+                </p>
+              ) : (
+                <p className="text-[11px] text-amber-400/80 flex items-center gap-1 mt-0.5">
+                  <Layers size={11} className="shrink-0" /> Sin ficha
+                </p>
+              )}
               <p className="text-xl font-bold text-kawa-green mt-2">
                 ${product.price.toLocaleString()}
               </p>
@@ -569,6 +632,54 @@ export default function ProductsPage() {
       )}
 
       {/* Batch Tag Modal */}
+      {/* Ligar a ficha */}
+      {isLinkModalOpen && (
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
+          <div className="bg-kawa-gray rounded-xl max-w-lg w-full border border-gray-800">
+            <div className="p-4 border-b border-gray-800 flex justify-between items-center">
+              <h2 className="text-lg font-bold text-white flex items-center gap-2"><Layers size={18} className="text-emerald-400" /> Ligar {selectedIds.length} a una ficha</h2>
+              <button onClick={() => setIsLinkModalOpen(false)} className="text-gray-400 hover:text-white"><X size={22} /></button>
+            </div>
+            <div className="p-5 space-y-4">
+              <div>
+                <label className="block text-sm text-gray-300 mb-1">Ficha del Catálogo</label>
+                <select
+                  value={linkMasterId}
+                  onChange={(e) => setLinkMasterId(e.target.value)}
+                  className="w-full px-3 py-2 bg-kawa-black border border-gray-700 rounded-lg text-white text-sm focus:outline-none focus:border-kawa-green"
+                >
+                  <option value="">Escoge la ficha…</option>
+                  {masters.map(m => <option key={m.id} value={m.id}>{m.name}{m.oem_code ? ` · ${m.oem_code}` : ''}</option>)}
+                </select>
+                <p className="text-[11px] text-gray-500 mt-1">¿No está? Créala en Catálogo con "Nueva ficha" y vuelve aquí.</p>
+              </div>
+              <label className="flex items-start gap-2 text-sm text-gray-300 cursor-pointer">
+                <input type="checkbox" checked={linkApplyData} onChange={(e) => setLinkApplyData(e.target.checked)} className="mt-1 w-4 h-4 accent-[#62BE1B]" />
+                <span>
+                  Ponerles los datos de la ficha
+                  <span className="block text-[11px] text-gray-500">Nombre (conserva su lote), descripción, categoría, código OEM, tag, motos y fotos (solo a los que no tienen). Sin marcar, solo se ligan.</span>
+                </span>
+              </label>
+              <ul className="max-h-40 overflow-y-auto text-xs text-gray-400 border border-gray-800 rounded-lg divide-y divide-gray-800">
+                {products.filter(p => selectedIds.includes(p.id)).map(p => (
+                  <li key={p.id} className="px-3 py-1.5 truncate">{p.name}{p.master_id ? <span className="text-amber-400"> · ya está en "{masterName(p.master_id)}"</span> : null}</li>
+                ))}
+              </ul>
+              <div className="flex gap-3">
+                <button onClick={() => setIsLinkModalOpen(false)} className="flex-1 py-2 border border-gray-700 rounded-lg text-white hover:bg-gray-800">Cancelar</button>
+                <button
+                  onClick={handleLink}
+                  disabled={isLinking || !linkMasterId}
+                  className="flex-1 py-2 bg-kawa-green text-black font-bold rounded-lg hover:bg-green-500 disabled:opacity-50 flex items-center justify-center gap-2"
+                >
+                  {isLinking && <Loader2 size={16} className="animate-spin" />} Ligar
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {isBatchTagModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
           <div className="bg-kawa-gray rounded-xl p-6 w-full max-w-md border border-[#333] shadow-xl">

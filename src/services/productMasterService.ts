@@ -125,6 +125,11 @@ export const productMasterService = {
     });
     return res.data.data;
   },
+  // Liga productos del inventario a una ficha; con applyMasterData les pone nombre, descripción, motos y fotos de la ficha
+  async link(masterId: string, productIds: string[], applyMasterData = true): Promise<{ linked: number; renamed: number; photos_copied: number }> {
+    const res = await api.post(`/product-masters/${masterId}/link`, { product_ids: productIds, apply_master_data: applyMasterData }, { timeout: 90_000 });
+    return res.data.data;
+  },
   async detach(productId: string) {
     await api.delete(`/product-masters/product/${productId}`);
   },

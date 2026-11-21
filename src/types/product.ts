@@ -24,6 +24,7 @@ export interface Category {
 export interface Product {
   id: string;
   name: string;
+  master_id?: string | null; // Ficha (Catálogo) a la que pertenece esta unidad
   slug: string;
   description: string;
   full_description: string | null;

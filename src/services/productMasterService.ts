@@ -53,6 +53,7 @@ export interface ProductMaster {
   oem_code: string | null;
   photo_product_id: string | null;
   products: MasterProductRow[];
+  model_ids?: string[]; // Motos guardadas en la ficha
   options: MasterOptions;
 }
 

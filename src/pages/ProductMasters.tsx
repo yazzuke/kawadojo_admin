@@ -100,10 +100,10 @@ export default function ProductMastersPage() {
     <div className="space-y-5">
       <div className="flex flex-wrap items-start gap-3">
         <div className="mr-auto">
-          <h1 className="text-2xl font-bold text-white flex items-center gap-2"><Layers size={22} className="text-kawa-green" /> Fichas de producto</h1>
+          <h1 className="text-2xl font-bold text-white flex items-center gap-2"><Layers size={22} className="text-kawa-green" /> Catálogo</h1>
           <p className="text-sm text-gray-400 mt-1 max-w-2xl">
-            Una ficha por pieza con el nombre bien escrito, la descripción y las fotos buenas. Los productos de cada lote
-            siguen igual (costo, precio, lote, vendido), solo quedan vinculados a su ficha.
+            Lo que ve el cliente: una ficha por pieza con el nombre bien escrito, la descripción, las fotos y las motos.
+            Las unidades de cada lote (costo, precio, vendido) están en Inventario y quedan vinculadas a su ficha.
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -179,7 +179,7 @@ export default function ProductMastersPage() {
                       products={p.products}
                       options={p.options}
                       categories={categories}
-                      initial={p.master ? { master_id: p.master.id, name: p.master.name } : undefined}
+                      initial={p.master ? { master_id: p.master.id, name: p.master.name, model_ids: masters.find(x => x.id === p.master!.id)?.model_ids } : undefined}
                       submitLabel={p.master ? 'Sumar a la ficha' : 'Crear ficha'}
                       onDone={done}
                     />
@@ -222,6 +222,7 @@ export default function ProductMastersPage() {
                         category_id: m.category?.id ?? null,
                         oem_code: m.oem_code,
                         photo_product_id: m.photo_product_id,
+                        model_ids: m.model_ids,
                       }}
                       submitLabel="Guardar ficha"
                       onDone={done}

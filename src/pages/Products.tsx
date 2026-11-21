@@ -247,7 +247,10 @@ export default function ProductsPage() {
       </datalist>
       {/* Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
-        <h1 className="text-2xl font-bold text-white">Productos</h1>
+        <div>
+          <h1 className="text-2xl font-bold text-white">Inventario</h1>
+          <p className="text-sm text-gray-400 mt-1">Cada unidad física: su costo, lote, precio y si ya se vendió. Lo que ve el cliente (nombre, descripción, fotos y motos) se arregla en Catálogo.</p>
+        </div>
         <div className="flex items-center gap-3">
           {selectedIds.length > 0 && (
             <>

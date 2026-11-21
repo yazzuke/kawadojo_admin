@@ -40,8 +40,9 @@ export const navGroups: NavGroup[] = [
   {
     title: 'Catálogo de la tienda',
     items: [
-      { to: '/products', icon: Package, label: 'Productos' },
-      { to: '/fichas', icon: Layers, label: 'Fichas' },
+      // Catálogo: lo que ve el cliente (una ficha por pieza). Inventario: cada unidad con su costo y lote
+      { to: '/fichas', icon: Layers, label: 'Catálogo' },
+      { to: '/products', icon: Package, label: 'Inventario' },
       { to: '/categories', icon: Tags, label: 'Categorías' },
       { to: '/models', icon: Bike, label: 'Modelos' },
       { to: '/resale-pricing', icon: ListOrdered, label: 'Precios Lista' },

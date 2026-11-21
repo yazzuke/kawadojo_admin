@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import toast from 'react-hot-toast';
 import { AlertTriangle, ArrowRight, Check, ImageOff, ImagePlus, Loader2 } from 'lucide-react';
 import type { Category } from '../types/product';
@@ -7,6 +7,7 @@ import {
   apiError, composeName, productMasterService, tagFromName,
   type MasterOptions, type MasterProductRow,
 } from '../services/productMasterService';
+import { modelService } from '../services/modelService';
 
 interface Initial {
   master_id?: string | null;
@@ -17,6 +18,7 @@ interface Initial {
   category_id?: string | null;
   oem_code?: string | null;
   photo_product_id?: string | null;
+  model_ids?: string[]; // Motos guardadas en la ficha
 }
 
 interface Props {
@@ -90,7 +92,12 @@ export default function MasterEditor({ products: rawProducts, options, categorie
   const [oem, setOem] = useState(initial?.oem_code ?? options.oem_codes[0]?.value ?? '');
   const [tag, setTag] = useState(initial?.group_tag ?? options.group_tags[0]?.value ?? '');
   const [photoId, setPhotoId] = useState(initial?.photo_product_id ?? options.photo_product_id ?? '');
-  const [modelIds, setModelIds] = useState<Set<string>>(() => new Set(options.models.map(m => m.id)));
+  // Motos: las guardadas en la ficha más las que ya tienen sus productos; se escogen de todos los modelos
+  const [modelIds, setModelIds] = useState<Set<string>>(() => new Set([...(initial?.model_ids ?? []), ...options.models.map(m => m.id)]));
+  const [allModels, setAllModels] = useState<Array<{ id: string; name: string }>>(options.models);
+  useEffect(() => {
+    modelService.getAll().then(list => setAllModels(list.map(m => ({ id: m.id, name: m.name })))).catch(() => { /* quedan las del grupo */ });
+  }, []);
   const [selected, setSelected] = useState<Set<string>>(() => new Set(products.filter(p => !p.outlier).map(p => p.id)));
   const [apply, setApply] = useState({
     name: true,
@@ -98,7 +105,7 @@ export default function MasterEditor({ products: rawProducts, options, categorie
     category: true,
     oem: true,
     group_tag: true,
-    models: options.models.length > 0,
+    models: options.models.length > 0 || !!initial?.model_ids?.length,
     copy_photos: true,
     replace_new_photos: false,
   });
@@ -166,7 +173,7 @@ export default function MasterEditor({ products: rawProducts, options, categorie
           category_id: categoryId || null,
           oem_code: oem.trim() || null,
           photo_product_id: null,
-          model_ids: [],
+          model_ids: [...modelIds],
           product_ids: [],
           apply: {},
         });
@@ -301,10 +308,9 @@ export default function MasterEditor({ products: rawProducts, options, categorie
           </p>
         </Section>
 
-        {options.models.length > 0 && (
-          <Section title="Motos">
+        <Section title={`Motos (${modelIds.size})`}>
             <div className="flex flex-wrap gap-1.5">
-              {options.models.map(m => (
+              {allModels.map(m => (
                 <button
                   key={m.id}
                   type="button"
@@ -315,9 +321,10 @@ export default function MasterEditor({ products: rawProducts, options, categorie
                 </button>
               ))}
             </div>
-            <p className="text-[11px] text-gray-500">Salen de lo que ya tienen los productos del grupo. Toca para quitar alguna.</p>
+            <p className="text-[11px] text-gray-500">
+              Toca las motos en las que sirve esta pieza. Quedan guardadas en la ficha y las heredan los productos nuevos que crees desde ella.
+            </p>
           </Section>
-        )}
 
         <Section title="Fotos de la ficha">
           {photoProducts.length ? (
@@ -430,7 +437,7 @@ export default function MasterEditor({ products: rawProducts, options, categorie
             <Toggle checked={apply.category} onChange={v => setApply(a => ({ ...a, category: v }))} label="Poner la misma categoría" />
             <Toggle checked={apply.oem} onChange={v => setApply(a => ({ ...a, oem: v }))} label="Poner el mismo código OEM" hint={oem ? undefined : 'No hay código: no se cambia nada'} />
             <Toggle checked={apply.group_tag} onChange={v => setApply(a => ({ ...a, group_tag: v }))} label={`Poner el tag "${effectiveTag}"`} hint="Así salen juntos en una sola tarjeta en la tienda" />
-            {options.models.length > 0 && (
+            {(options.models.length > 0 || modelIds.size > 0) && (
               <Toggle checked={apply.models} onChange={v => setApply(a => ({ ...a, models: v }))} label={`Poner las mismas motos (${modelIds.size})`} hint="Reemplaza las motos de cada producto por las marcadas" />
             )}
             <Toggle

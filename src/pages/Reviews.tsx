@@ -757,7 +757,7 @@ export default function ReviewsPage() {
                 <input
                   ref={fileInputRef}
                   type="file"
-                  accept="image/*,video/*"
+                  accept="image/*,video/*,.heic,.heif"
                   className="w-full text-gray-300 file:mr-3 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-kawa-green file:text-black file:font-medium file:cursor-pointer hover:file:bg-kawa-green-dark"
                 />
               </div>

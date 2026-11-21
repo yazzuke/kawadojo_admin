@@ -244,7 +244,7 @@ export default function ModelsPage() {
                     <span className="text-sm text-gray-500">Seleccionar imagen</span>
                     <input
                       type="file"
-                      accept="image/*"
+                      accept="image/*,.heic,.heif"
                       onChange={handleLogoChange}
                       className="hidden"
                     />

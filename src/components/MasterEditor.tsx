@@ -74,7 +74,7 @@ const Section = ({ title, children }: { title: string; children: React.ReactNode
 );
 
 // Arma la ficha maestra de un grupo: eliges el nombre, la descripción y las fotos buenas, y qué se aplica a los productos
-const MAX_PHOTO_MB = 5;
+const MAX_PHOTO_MB = 15; // el servidor la guarda como WebP liviano
 
 export default function MasterEditor({ products: rawProducts, options, categories, initial, submitLabel, onDone }: Props) {
   // Fotos subidas aquí: se ven sin recargar la página
@@ -359,7 +359,7 @@ export default function MasterEditor({ products: rawProducts, options, categorie
               <input
                 ref={fileInput}
                 type="file"
-                accept="image/jpeg,image/png,image/webp"
+                accept="image/jpeg,image/png,image/webp,image/heic,image/heif,.heic,.heif"
                 multiple
                 className="hidden"
                 onChange={e => uploadPhotos(e.target.files)}

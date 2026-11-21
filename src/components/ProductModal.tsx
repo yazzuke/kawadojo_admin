@@ -611,7 +611,7 @@ export default function ProductModal({ product, initialData, onClose, onSuccess 
                 <span className="text-xs text-gray-500">Subir</span>
                 <input
                   type="file"
-                  accept="image/*"
+                  accept="image/*,.heic,.heif"
                   multiple
                   onChange={handleImageChange}
                   className="hidden"

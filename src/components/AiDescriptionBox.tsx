@@ -11,16 +11,18 @@ interface Props {
   conditions: { nuevo: number; usado: number };
   currentDescriptions: string[];
   onUse: (description: string, fullDescription: string | null) => void;
+  /** Datos fijos que la IA debe tener en cuenta (ej. las piezas de un kit). Se suman a lo que escribas */
+  context?: string;
 }
 
 // La IA escribe la descripción de la ficha con el nombre, el código OEM (verificado en Impex) y las motos
-export default function AiDescriptionBox({ name, oemCode, categoryId, modelIds, conditions, currentDescriptions, onUse }: Props) {
+export default function AiDescriptionBox({ name, oemCode, categoryId, modelIds, conditions, currentDescriptions, onUse, context }: Props) {
   const [extra, setExtra] = useState('');
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<AiDescription | null>(null);
 
   const generate = async () => {
-    if (!name.trim()) { toast.error('Primero ponle nombre a la ficha'); return; }
+    if (!name.trim()) { toast.error('Primero ponle un nombre'); return; }
     try {
       setLoading(true);
       const data = await productMasterService.aiDescription({
@@ -30,7 +32,7 @@ export default function AiDescriptionBox({ name, oemCode, categoryId, modelIds, 
         model_ids: modelIds,
         conditions,
         current_descriptions: currentDescriptions,
-        extra: extra || null,
+        extra: [context, extra].filter(Boolean).join('. ') || null,
       });
       setResult(data);
     } catch (err) {

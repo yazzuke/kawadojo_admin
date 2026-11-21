@@ -3,6 +3,7 @@ import toast from 'react-hot-toast';
 import { AlertTriangle, Boxes, Loader2, Pencil, Plus, RefreshCw, Trash2, Truck, X } from 'lucide-react';
 import { apiError, productMasterService, type ProductMaster } from '../services/productMasterService';
 import { formatCop, kitService, type Kit, type KitPayload } from '../services/kitService';
+import AiDescriptionBox from '../components/AiDescriptionBox';
 
 const EMPTY: KitPayload = { name: '', description: '', discount_type: 'percent', discount_percent: 5, fixed_price: null, items: [] };
 const inputCls = 'w-full bg-[#1e1e1e] border border-gray-700 text-white text-sm rounded-lg px-3 py-2 focus:border-kawa-green outline-none';
@@ -45,6 +46,18 @@ function KitEditor({ kit, masters, onClose, onSaved }: {
   const listPrice = form.items.reduce((s, i) => s + unitPrice(byId.get(i.master_id)) * i.quantity, 0);
   const price = previewPrice(listPrice, form);
 
+  // Para la IA: qué piezas trae el kit, sus códigos y las motos que tienen en común
+  const chosen = form.items.map(i => ({ ...i, master: byId.get(i.master_id) })).filter(i => i.master);
+  const modelsOf = (m: ProductMaster) => new Set([...(m.model_ids ?? []), ...m.options.models.map(x => x.id)]);
+  const commonModels = chosen.length
+    ? [...modelsOf(chosen[0].master!)].filter(id => chosen.every(c => modelsOf(c.master!).has(id)))
+    : [];
+  const aiContext = chosen.length
+    ? `Es un KIT (combo) que se vende completo y trae: ${chosen.map(c => `${c.quantity} × ${c.master!.name}${c.master!.oem_code ? ` (OEM ${c.master!.oem_code})` : ''}`).join(', ')}. `
+      + `Son ${chosen.reduce((s, c) => s + c.quantity, 0)} piezas en total. Las piezas también se venden sueltas`
+      + (listPrice > price ? `; comprando el kit el cliente se ahorra ${formatCop(listPrice - price)}` : '')
+    : '';
+
   const addMaster = (id: string) => {
     if (!id || form.items.some(i => i.master_id === id)) return;
     setForm(f => ({ ...f, items: [...f.items, { master_id: id, quantity: 1 }] }));
@@ -86,7 +99,23 @@ function KitEditor({ kit, masters, onClose, onSaved }: {
           </div>
           <div>
             <label className="block text-xs text-gray-400 mb-1">Descripción (opcional)</label>
-            <textarea value={form.description ?? ''} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} rows={3} className={inputCls} placeholder="ej: Juego completo: 3 discos A + 2 discos B, así viene de Kawasaki." />
+            <textarea value={form.description ?? ''} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} rows={4} className={inputCls} placeholder="ej: Juego completo: 3 discos A + 2 discos B, así viene de Kawasaki." />
+            {chosen.length > 0 ? (
+              <div className="mt-2">
+                <AiDescriptionBox
+                  name={form.name || `Kit ${chosen.map(c => c.master!.name).join(' + ')}`}
+                  oemCode={chosen.map(c => c.master!.oem_code).find(Boolean) ?? ''}
+                  categoryId={chosen.map(c => c.master!.category?.id).find(Boolean) ?? ''}
+                  modelIds={commonModels}
+                  conditions={{ nuevo: chosen.reduce((s, c) => s + c.quantity, 0), usado: 0 }}
+                  currentDescriptions={[form.description ?? '', ...chosen.map(c => c.master!.description ?? '')].filter(Boolean)}
+                  context={aiContext}
+                  onUse={(d, full) => setForm(f => ({ ...f, description: full ? `${d}\n\n${full}` : d }))}
+                />
+              </div>
+            ) : (
+              <p className="text-[11px] text-gray-500 mt-1">Agrega las piezas del kit y aquí te sale el botón para que la IA escriba la descripción.</p>
+            )}
           </div>
           <div>
             <label className="block text-xs text-gray-400 mb-1">Precio del kit</label>
